@@ -88,6 +88,7 @@ header {
     z-index: 1000;
     font-family: 'Montserrat', sans-serif;
     transition: background-color 0.3s ease; /* Smooth transition effect */
+    
 }
 
 header.scrolled {
@@ -2703,16 +2704,23 @@ html {
    Header Mobile Fix
    =========================== */
 @media (max-width: 768px) {
+
+    header {
+        width: 92%;
+    }
     header .container {
-        padding: 0 1rem;
+        padding: 0rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
 
+    
+
     .logo {
         font-size: 1.4rem;
         white-space: nowrap;
+        margin-left: 50px;
     }
 
     .mobile-menu-btn {
@@ -2726,7 +2734,7 @@ html {
 
     .nav-links {
         position: fixed;
-        top: 70px; /* tinggi header */
+        top: 70px; 
         left: -100%;
         width: 100%;
         height: calc(100vh - 70px);
@@ -2758,6 +2766,7 @@ html {
         background-color: transparent;
         color: var(--light-text);
         transition: all 0.3s ease;
+        margin-right: 30px;
     }
 
     .cta-button:hover,
