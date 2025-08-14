@@ -661,6 +661,244 @@ function enableSwipe(element, onSwipeLeft, onSwipeRight) {
     }, { passive: true });
 }
 
+/*Photo Card*/
+// Photo card interactions and animations
+document.addEventListener('DOMContentLoaded', function() {
+    const photoCards = document.querySelectorAll('.photo-card');
+    
+    // Initialize cards with entrance animations
+    initializeCardAnimations();
+    
+    // Add interaction event listeners
+    addCardInteractions();
+    
+    // Setup back button functionality
+    setupBackButton();
+    
+    // Setup scroll animations
+    setupScrollAnimations();
+});
+
+/**
+ * Initialize card entrance animations with stagger effect
+ */
+function initializeCardAnimations() {
+    const photoCards = document.querySelectorAll('.photo-card');
+    
+    photoCards.forEach((card, index) => {
+        // Add staggered delay for entrance animation
+        card.style.animationDelay = `${index * 0.1}s`;
+        card.classList.add('animate-in');
+    });
+}
+
+/**
+ * Add hover and click interactions to photo cards
+ */
+function addCardInteractions() {
+    const photoCards = document.querySelectorAll('.photo-card');
+    
+    photoCards.forEach(card => {
+        // Enhanced hover interaction
+        card.addEventListener('mouseenter', function() {
+            this.classList.add('hovered');
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.classList.remove('hovered');
+        });
+        
+        // Click interaction for better mobile experience
+        card.addEventListener('click', function(e) {
+            // Don't interfere with view-more button clicks
+            if (e.target.closest('.view-more-btn')) {
+                return;
+            }
+            
+            // Add click feedback animation
+            addClickFeedback(this);
+        });
+        
+        // Touch interactions for mobile
+        card.addEventListener('touchstart', function() {
+            this.classList.add('hovered');
+        });
+        
+        card.addEventListener('touchend', function() {
+            setTimeout(() => {
+                this.classList.remove('hovered');
+            }, 300);
+        });
+    });
+}
+
+/**
+ * Add click feedback animation
+ * @param {Element} element - The element to animate
+ */
+function addClickFeedback(element) {
+    element.style.transform = 'scale(0.98)';
+    
+    setTimeout(() => {
+        element.style.transform = '';
+    }, 150);
+}
+
+/**
+ * Setup back button functionality
+ */
+function setupBackButton() {
+    const backButton = document.querySelector('.back-button');
+    
+    if (backButton) {
+        backButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Add click animation
+            this.style.opacity = '0.6';
+            
+            setTimeout(() => {
+                this.style.opacity = '';
+                // Navigate back in history
+                window.history.back();
+            }, 100);
+        });
+    }
+}
+
+/**
+ * Setup intersection observer for scroll-triggered animations
+ */
+function setupScrollAnimations() {
+    const photoCards = document.querySelectorAll('.photo-card');
+    
+    // Create intersection observer
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                
+                // Add a subtle pulse effect when card becomes visible
+                setTimeout(() => {
+                    entry.target.style.transform = 'scale(1.02)';
+                    
+                    setTimeout(() => {
+                        entry.target.style.transform = '';
+                    }, 200);
+                }, 100);
+            }
+        });
+    }, {
+        threshold: 0.1,
+        rootMargin: '50px'
+    });
+    
+    // Observe all photo cards
+    photoCards.forEach(card => {
+        observer.observe(card);
+    });
+}
+
+/**
+ * Add smooth scrolling behavior for internal links
+ */
+function setupSmoothScrolling() {
+    const links = document.querySelectorAll('a[href^="#"]');
+    
+    links.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const targetId = this.getAttribute('href').substring(1);
+            const targetElement = document.getElementById(targetId);
+            
+            if (targetElement) {
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+}
+
+/**
+ * Handle responsive behavior
+ */
+function handleResponsiveChanges() {
+    let resizeTimer;
+    
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        
+        resizeTimer = setTimeout(function() {
+            // Re-calculate card heights on mobile if needed
+            const photoCards = document.querySelectorAll('.photo-card');
+            const isMobile = window.innerWidth <= 768;
+            
+            photoCards.forEach(card => {
+                if (isMobile) {
+                    card.style.height = '350px';
+                } else {
+                    card.style.height = '420px';
+                }
+            });
+        }, 250);
+    });
+}
+
+/**
+ * Add keyboard navigation support
+ */
+function addKeyboardNavigation() {
+    const photoCards = document.querySelectorAll('.photo-card');
+    
+    photoCards.forEach((card, index) => {
+        card.setAttribute('tabindex', '0');
+        
+        card.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                
+                // Find the view-more link and click it
+                const viewMoreBtn = this.querySelector('.view-more-btn');
+                if (viewMoreBtn) {
+                    viewMoreBtn.click();
+                }
+            }
+        });
+        
+        // Add focus styles
+        card.addEventListener('focus', function() {
+            this.style.outline = '2px solid #4a5568';
+            this.style.outlineOffset = '2px';
+        });
+        
+        card.addEventListener('blur', function() {
+            this.style.outline = '';
+            this.style.outlineOffset = '';
+        });
+    });
+}
+
+// Initialize additional features when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    handleResponsiveChanges();
+    addKeyboardNavigation();
+    setupSmoothScrolling();
+});
+
+// Export functions for potential external use
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        initializeCardAnimations,
+        addCardInteractions,
+        setupBackButton,
+        setupScrollAnimations
+    };
+}
+
+
 // Example usage:
 document.addEventListener('DOMContentLoaded', function() {
     const testimonialSlider = document.querySelector('.testimonial-slider');

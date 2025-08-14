@@ -21,6 +21,7 @@ body {
     color: var(--light-text);
     background-color: var(--dark-blue);
     line-height: 1.6;
+    
 }
 .container {
     width: 100%;
@@ -214,6 +215,247 @@ header .container {
 .slide.active {
     opacity: 1;
 }
+
+/*Photo Card*/
+.photo {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-bottom: 60px;
+}
+
+
+.back-button {
+    display: flex;
+    align-items: center;
+    color: #4a5568;
+    text-decoration: none;
+    margin-bottom: 30px;
+    font-size: 16px;
+    font-weight: 500;
+    transition: opacity 0.3s ease;
+}
+
+.back-button:hover {
+    opacity: 0.8;
+}
+
+.back-button::before {
+    content: '←';
+    margin-right: 8px;
+    font-size: 18px;
+}
+
+.section-header {
+    text-align: center;
+    margin-top: 40px;
+    margin-bottom: 70px;
+}
+
+.section-subtitle {
+    color: #718096;
+    font-size: 18px;
+    font-weight: 300;
+    margin-bottom: 8px;
+}
+
+.section-title {
+    color: #f9f9f9;
+    font-size: 42px;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 25px;
+    margin-top: 40px;
+}
+
+.photo-card {
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    height: 420px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.photo-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Dark blue theme matching the reference image */
+.photo-card.dark-blue {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+}
+
+.photo-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.photo-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.photo-card:hover .photo-image img {
+    transform: scale(1.05);
+}
+
+.photo-image::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        135deg, 
+        rgba(74, 85, 104, 0.7) 0%, 
+        rgba(45, 55, 72, 0.8) 50%,
+        rgba(26, 32, 44, 0.9) 100%
+    );
+    z-index: 1;
+}
+
+.photo-card:hover .photo-image::before {
+    background: transparent;
+}
+
+
+.photo-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 30px;
+    color: white;
+    z-index: 2;
+}
+
+.photo-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 15px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.price-tag {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    text-align: left;
+}
+
+.view-more-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    z-index: 2;
+    font-size: 18px;
+}
+
+.view-more-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+/* Animation keyframes */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.photo-card.animate-in {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+.photo-card.hovered {
+    transform: translateY(-8px) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .photo-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .photo-card {
+        height: 380px;
+    }
+    
+    .section-title {
+        font-size: 32px;
+    }
+    
+    body {
+        padding: 20px 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .photo-card {
+        height: 350px;
+    }
+    
+    .photo-content {
+        padding: 25px;
+    }
+    
+    .photo-title {
+        font-size: 20px;
+    }
+    
+    .photo-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .section-title {
+        font-size: 28px;
+    }
+    
+    .section-subtitle {
+        font-size: 16px;
+    }
+}
+
 
 /* Camera Specialist Section Styles */
 .camera-specialist {
@@ -504,7 +746,7 @@ header .container {
             text-transform: uppercase;
             opacity: 0.9;
             animation: fadeIn 1s ease-out 0.2s both;
-            
+
         }
 
         .red-dot {
@@ -2449,5 +2691,132 @@ html {
     
     .container {
         padding: 0 15px;
+    }
+}
+
+/* ===========================
+   Responsive Enhancement
+   =========================== */
+
+/* 1. Header & Navigasi Mobile */
+/* ===========================
+   Header Mobile Fix
+   =========================== */
+@media (max-width: 768px) {
+    header .container {
+        padding: 0 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .logo {
+        font-size: 1.4rem;
+        white-space: nowrap;
+    }
+
+    .mobile-menu-btn {
+        display: block;
+        font-size: 1.8rem;
+        background: transparent;
+        border: none;
+        color: var(--light-text);
+        cursor: pointer;
+    }
+
+    .nav-links {
+        position: fixed;
+        top: 70px; /* tinggi header */
+        left: -100%;
+        width: 100%;
+        height: calc(100vh - 70px);
+        background-color: var(--secondary-color);
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding-top: 2rem;
+        gap: 1.5rem;
+        transition: left 0.3s ease-in-out;
+        z-index: 999;
+    }
+
+    .nav-links.active {
+        left: 0;
+    }
+
+    .nav-links a {
+        font-size: 1.1rem;
+        padding: 0.5rem 0;
+        display: block;
+        width: 100%;
+        text-align: center;
+    }
+
+    /* Transparent buttons with white text on mobile */
+    .cta-button,
+    .contact-button {
+        background-color: transparent;
+        color: var(--light-text);
+        transition: all 0.3s ease;
+    }
+
+    .cta-button:hover,
+    .contact-button:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+    }
+}
+
+
+
+    
+
+/* 2. Hero Section */
+@media (max-width: 576px) {
+    .hero h1 {
+        font-size: 1.8rem;
+        line-height: 1.3;
+        word-break: break-word;
+    }
+    .hero p {
+        font-size: 0.9rem;
+    }
+}
+
+/* 3. Grid Layout (Portfolio, Photo, Gallery, Team) */
+@media (max-width: 576px) {
+    .portfolio-grid,
+    .photo-grid,
+    .gallery-grid,
+    .team-grid {
+        gap: 10px;
+    }
+}
+
+/* 4. About Section */
+@media (max-width: 768px) {
+    .about-image,
+    .about-text {
+        width: 100%;
+    }
+}
+
+/* 5. Formulir & Button */
+@media (max-width: 576px) {
+    .form-control {
+        padding: 0.9rem;
+    }
+    .form-submit,
+    .cta-button,
+    .contact-button {
+        width: 100%;
+    }
+}
+
+/* 6. Footer */
+@media (max-width: 768px) {
+    .footer {
+        padding: 40px 15px 20px;
     }
 }
