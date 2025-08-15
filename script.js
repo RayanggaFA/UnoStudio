@@ -899,6 +899,7 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 
+
 // Example usage:
 document.addEventListener('DOMContentLoaded', function() {
     const testimonialSlider = document.querySelector('.testimonial-slider');
