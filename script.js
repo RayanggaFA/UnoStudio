@@ -58,16 +58,44 @@ async function handleLoginPage() {
     const loginForm = document.getElementById('login-form');
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('email').value;
+        const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
         const errorMessage = document.getElementById('error-message');
 
+        // Reset error message
+        errorMessage.textContent = '';
+
         try {
-            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            if (error) throw error;
+            console.log('Attempting login for:', email); // Debug
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ 
+                email, 
+                password 
+            });
+            
+            if (error) {
+                console.error('Login error:', error); // Debug
+                
+                // Custom error messages dalam Bahasa Indonesia
+                if (error.message.includes('Invalid login credentials')) {
+                    throw new Error('Email atau password salah. Silakan coba lagi.');
+                } else if (error.message.includes('Email not confirmed')) {
+                    throw new Error('Email belum dikonfirmasi. Silakan cek inbox Anda.');
+                } else if (error.message.includes('User not found')) {
+                    throw new Error('Akun tidak ditemukan. Silakan daftar terlebih dahulu.');
+                } else {
+                    throw error;
+                }
+            }
+
+            console.log('Login successful:', data); // Debug
             redirectToDashboard();
+            
         } catch (error) {
+            console.error('Caught error:', error); // Debug
             errorMessage.textContent = error.message;
+            errorMessage.style.color = 'red';
+            errorMessage.style.marginTop = '10px';
         }
     });
 }
@@ -76,14 +104,22 @@ async function handleRegisterPage() {
     const registerForm = document.getElementById('register-form');
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const fullName = document.getElementById('full-name').value;
-        const phone = document.getElementById('phone').value;
-        const email = document.getElementById('email').value;
+        const fullName = document.getElementById('full-name').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
         const errorMessage = document.getElementById('error-message');
 
+        // Validasi minimal
+        if (password.length < 6) {
+            errorMessage.textContent = 'Password minimal 6 karakter';
+            return;
+        }
+
         try {
-            // Kirim full_name dan phone_number sebagai metadata
+            console.log('Registering user:', email); // Debug
+
+            // 1. Buat user di auth.users
             const { data: authData, error: authError } = await supabaseClient.auth.signUp({ 
                 email, 
                 password,
@@ -95,15 +131,39 @@ async function handleRegisterPage() {
                 }
             });
             
-            if (authError) throw authError;
+            if (authError) {
+                console.error('Auth error:', authError); // Debug
+                throw authError;
+            }
 
-            // Profile otomatis dibuat via trigger!
-            alert('Pendaftaran berhasil! Cek email Anda untuk konfirmasi, lalu login.');
+            console.log('User created:', authData.user); // Debug
+
+            // Cek apakah email confirmation enabled
+            if (authData.user && authData.user.identities && authData.user.identities.length === 0) {
+                alert('Email sudah terdaftar. Silakan gunakan email lain atau login.');
+                return;
+            }
+
+            // Cek apakah perlu konfirmasi email
+            if (authData.user && !authData.session) {
+                alert('Pendaftaran berhasil! Silakan cek email Anda untuk konfirmasi, lalu login.');
+            } else {
+                alert('Pendaftaran berhasil! Silakan login.');
+            }
+            
             window.location.href = 'login.html';
 
         } catch (error) {
-            console.error('Registration error:', error);
-            errorMessage.textContent = error.message || 'Terjadi kesalahan saat registrasi';
+            console.error('Registration error:', error); // Debug
+            
+            // Custom error messages
+            if (error.message.includes('already registered')) {
+                errorMessage.textContent = 'Email sudah terdaftar. Silakan login.';
+            } else if (error.message.includes('Password should be')) {
+                errorMessage.textContent = 'Password minimal 6 karakter.';
+            } else {
+                errorMessage.textContent = error.message || 'Terjadi kesalahan saat registrasi';
+            }
         }
     });
 }
