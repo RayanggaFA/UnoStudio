@@ -4,7 +4,30 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const { createClient } = supabase;
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Handle email confirmation token
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenHash = urlParams.get('token_hash');
+    const type = urlParams.get('type');
+    
+    if (tokenHash && type === 'signup') {
+        try {
+            const { error } = await supabaseClient.auth.verifyOtp({
+                token_hash: tokenHash,
+                type: 'signup'
+            });
+            
+            if (error) throw error;
+            
+            alert('Email berhasil dikonfirmasi! Silakan login.');
+            // Bersihkan URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (error) {
+            console.error('Verification error:', error);
+            alert('Gagal konfirmasi email: ' + error.message);
+        }
+    }
+
     const path = window.location.pathname;
 
     if (path.includes('login.html')) {
@@ -17,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadClientDashboard();
     }
     
-    // Event listener untuk tombol logout yang ada di kedua dashboard
+    // Event listener untuk tombol logout
     const logoutButton = document.getElementById('logout-button');
     if (logoutButton) {
         logoutButton.addEventListener('click', handleLogout);
