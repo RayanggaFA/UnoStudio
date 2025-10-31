@@ -1,0 +1,106 @@
+/* auth.css */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --primary-color: #FF3A3A;
+    --dark-blue: #010A1A;
+    --light-text: #ffffff;
+    --gray-text: #9ca3af;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--dark-blue);
+    color: var(--light-text);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+
+.auth-container {
+    background-color: #0D1218;
+    padding: 2.5rem;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.logo {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--light-text);
+    text-decoration: none;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+h2 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+}
+
+p {
+    color: var(--gray-text);
+    margin-bottom: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--gray-text);
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.8rem;
+    background-color: #1a202c;
+    border: 1px solid #2d3748;
+    border-radius: 5px;
+    color: var(--light-text);
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.auth-button {
+    width: 100%;
+    padding: 0.9rem;
+    background-color: var(--primary-color);
+    border: none;
+    border-radius: 5px;
+    color: var(--light-text);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.auth-button:hover {
+    background-color: #e02e2e;
+}
+
+.error-text {
+    color: #f87171;
+    margin-top: 1rem;
+    min-height: 1.2em;
+}
+
+.redirect-link {
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.redirect-link a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+}

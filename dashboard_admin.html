@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - UNO Studio</title>
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+    <header class="dashboard-header">
+        <div class="container">
+            <a href="Uno Studio.html" class="logo">UNO STUDIO</a>
+            <button id="logout-button" class="logout-btn">Logout</button>
+        </div>
+    </header>
+
+    <main class="container">
+        <h1>Admin Dashboard</h1>
+        <p>Kelola semua reservasi dari client.</p>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Client</th>
+                        <th>Layanan</th>
+                        <th>Tanggal</th>
+                        <th>Waktu</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="reservations-table-body">
+                    <!-- Data reservasi akan dimuat di sini oleh JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+    
+    <!-- Supabase & Script -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
+</body>
+</html>

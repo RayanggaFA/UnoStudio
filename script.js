@@ -1,4 +1,363 @@
+const SUPABASE_URL = 'https://minidxzoceavkaksffkt.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pbmlkeHpvY2Vhdmtha3NmZmt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3OTcxNDUsImV4cCI6MjA3NzM3MzE0NX0.uG85i8pJBubXnCVGd41CV95H8058gj9-yVk8L07oHuQ';
 
+const { createClient } = supabase;
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+document.addEventListener('DOMContentLoaded', () => {
+    const path = window.location.pathname;
+
+    if (path.includes('login.html')) {
+        handleLoginPage();
+    } else if (path.includes('register.html')) {
+        handleRegisterPage();
+    } else if (path.includes('dashboard_admin.html')) {
+        loadAdminDashboard();
+    } else if (path.includes('dashboard_client.html')) {
+        loadClientDashboard();
+    }
+    
+    // Event listener untuk tombol logout yang ada di kedua dashboard
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', handleLogout);
+    }
+});
+
+async function handleLoginPage() {
+    // Jika user sudah login, arahkan ke dashboard yang sesuai
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+        redirectToDashboard();
+        return;
+    }
+
+    const loginForm = document.getElementById('login-form');
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const errorMessage = document.getElementById('error-message');
+
+        try {
+            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+            redirectToDashboard();
+        } catch (error) {
+            errorMessage.textContent = error.message;
+        }
+    });
+}
+
+async function handleRegisterPage() {
+    const registerForm = document.getElementById('register-form');
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fullName = document.getElementById('full-name').value;
+        const phone = document.getElementById('phone').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const errorMessage = document.getElementById('error-message');
+
+        try {
+            // Kirim full_name dan phone_number sebagai metadata
+            const { data: authData, error: authError } = await supabaseClient.auth.signUp({ 
+                email, 
+                password,
+                options: {
+                    data: {
+                        full_name: fullName,
+                        phone_number: phone
+                    }
+                }
+            });
+            
+            if (authError) throw authError;
+
+            // Profile otomatis dibuat via trigger!
+            alert('Pendaftaran berhasil! Cek email Anda untuk konfirmasi, lalu login.');
+            window.location.href = 'login.html';
+
+        } catch (error) {
+            console.error('Registration error:', error);
+            errorMessage.textContent = error.message || 'Terjadi kesalahan saat registrasi';
+        }
+    });
+}
+
+async function handleLogout() {
+    await supabaseClient.auth.signOut();
+    window.location.href = 'login.html';
+}
+
+async function redirectToDashboard() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    // Ambil role dari tabel profiles
+    const { data: profile, error } = await supabaseClient
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+    if (error || !profile) {
+        console.error('Error fetching profile or profile not found:', error);
+        handleLogout(); // Jika profil tidak ditemukan, logout paksa
+        return;
+    }
+
+    if (profile.role === 'admin') {
+        window.location.href = 'dashboard_admin.html';
+    } else {
+        window.location.href = 'dashboard_client.html';
+    }
+}
+
+async function loadAdminDashboard() {
+    // Proteksi halaman: Hanya admin yang bisa mengakses
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+        window.location.href = 'login.html';
+        return;
+    }
+    const { data: profile } = await supabaseClient.from('profiles').select('role').eq('id', user.id).single();
+    if (profile.role !== 'admin') {
+        alert('Akses ditolak.');
+        window.location.href = 'dashboard_client.html';
+        return;
+    }
+    
+    fetchAndDisplayAllReservations();
+}
+
+async function fetchAndDisplayAllReservations() {
+    const tableBody = document.getElementById('reservations-table-body');
+    if (!tableBody) return;
+
+    // Join query untuk mengambil data terkait
+    const { data: reservations, error } = await supabaseClient
+        .from('reservations')
+        .select(`
+            id,
+            reservation_date,
+            start_time,
+            status,
+            profiles ( full_name ),
+            services ( name )
+        `)
+        .order('reservation_date', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching reservations:', error);
+        return;
+    }
+
+    tableBody.innerHTML = reservations.map(res => `
+        <tr>
+            <td>${res.profiles.full_name}</td>
+            <td>${res.services.name}</td>
+            <td>${res.reservation_date}</td>
+            <td>${res.start_time.substring(0, 5)}</td>
+            <td><span class="status-${res.status}">${res.status}</span></td>
+            <td>
+                ${res.status === 'pending' ? `
+                <button class="action-btn confirm-btn" onclick="updateReservationStatus('${res.id}', 'confirmed')">Confirm</button>
+                <button class="action-btn cancel-btn" onclick="updateReservationStatus('${res.id}', 'cancelled')">Cancel</button>
+                ` : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function updateReservationStatus(reservationId, newStatus) {
+    const { error } = await supabaseClient
+        .from('reservations')
+        .update({ status: newStatus })
+        .eq('id', reservationId);
+    
+    if (error) {
+        alert('Gagal mengupdate status: ' + error.message);
+    } else {
+        alert('Status berhasil diupdate!');
+        fetchAndDisplayAllReservations(); // Muat ulang data
+    }
+}
+
+let selectedTimeSlot = null;
+
+async function loadClientDashboard() {
+     // Proteksi halaman
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+        window.location.href = 'login.html';
+        return;
+    }
+    
+    populateServicesDropdown();
+    fetchAndDisplayClientReservations();
+
+    document.getElementById('reservation-date').addEventListener('change', generateAvailableTimeSlots);
+    document.getElementById('booking-form').addEventListener('submit', handleBookingSubmit);
+}
+
+async function populateServicesDropdown() {
+    const selectElement = document.getElementById('service-select');
+    const { data: services, error } = await supabaseClient.from('services').select('*');
+    if (error) return;
+
+    selectElement.innerHTML = services.map(service => 
+        `<option value="${service.id}" data-duration="${service.duration_minutes}">${service.name} - Rp${service.price}</option>`
+    ).join('');
+}
+
+async function generateAvailableTimeSlots() {
+    const date = document.getElementById('reservation-date').value;
+    const container = document.getElementById('time-slots-container');
+    if (!date) {
+        container.innerHTML = '<p>Silakan pilih tanggal terlebih dahulu.</p>';
+        return;
+    }
+
+    // 1. Ambil semua reservasi pada tanggal yang dipilih
+    const { data: bookedSlots, error } = await supabaseClient
+        .from('reservations')
+        .select('start_time, end_time')
+        .eq('reservation_date', date)
+        .neq('status', 'cancelled');
+
+    if (error) {
+        container.innerHTML = '<p>Gagal memuat slot waktu.</p>';
+        return;
+    }
+
+    // 2. Buat daftar semua kemungkinan slot waktu (misal dari jam 10:00 - 19:30)
+    const allSlots = [];
+    for (let hour = 10; hour < 20; hour++) {
+        allSlots.push(`${String(hour).padStart(2, '0')}:00`);
+        allSlots.push(`${String(hour).padStart(2, '0')}:30`);
+    }
+
+    // 3. Filter slot yang tersedia
+    container.innerHTML = '';
+    allSlots.forEach(slot => {
+        const slotTime = `${slot}:00`;
+        let isBooked = false;
+        
+        for (const booked of bookedSlots) {
+            // Cek apakah slot ini tumpang tindih dengan slot yang sudah dibooking
+            if (slotTime >= booked.start_time && slotTime < booked.end_time) {
+                isBooked = true;
+                break;
+            }
+        }
+        
+        const slotElement = document.createElement('div');
+        slotElement.textContent = slot;
+        slotElement.classList.add('time-slot');
+        if (isBooked) {
+            slotElement.classList.add('disabled');
+        } else {
+            slotElement.addEventListener('click', () => {
+                // Hapus seleksi sebelumnya
+                document.querySelectorAll('.time-slot.selected').forEach(el => el.classList.remove('selected'));
+                // Tambahkan seleksi baru
+                slotElement.classList.add('selected');
+                selectedTimeSlot = slot;
+            });
+        }
+        container.appendChild(slotElement);
+    });
+}
+
+async function handleBookingSubmit(e) {
+    e.preventDefault();
+    
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+        alert('Sesi Anda telah berakhir. Silakan login kembali.');
+        window.location.href = 'login.html';
+        return;
+    }
+    
+    const serviceSelect = document.getElementById('service-select');
+    const serviceId = serviceSelect.value;
+    const duration = serviceSelect.options[serviceSelect.selectedIndex].dataset.duration;
+    const reservationDate = document.getElementById('reservation-date').value;
+    const notes = document.getElementById('notes').value;
+
+    if (!selectedTimeSlot) {
+        alert('Silakan pilih jam reservasi.');
+        return;
+    }
+
+    // Hitung waktu selesai
+    const [hours, minutes] = selectedTimeSlot.split(':').map(Number);
+    const startTime = `${selectedTimeSlot}:00`;
+    const endTimeObj = new Date(`1970-01-01T${startTime}`);
+    endTimeObj.setMinutes(endTimeObj.getMinutes() + parseInt(duration));
+    const endTime = endTimeObj.toTimeString().split(' ')[0];
+    
+    try {
+        const { error } = await supabaseClient.from('reservations').insert([{
+            client_id: user.id,
+            service_id: serviceId,
+            reservation_date: reservationDate,
+            start_time: startTime,
+            end_time: endTime,
+            status: 'pending',
+            notes: notes
+        }]);
+
+        if (error) throw error;
+
+        alert('Reservasi berhasil dibuat! Menunggu konfirmasi dari admin.');
+        fetchAndDisplayClientReservations(); // Muat ulang daftar reservasi
+        document.getElementById('booking-form').reset();
+        document.getElementById('time-slots-container').innerHTML = '<p>Silakan pilih tanggal terlebih dahulu.</p>';
+        selectedTimeSlot = null;
+
+    } catch (error) {
+        alert('Gagal membuat reservasi: ' + error.message);
+    }
+}
+
+async function fetchAndDisplayClientReservations() {
+    const listContainer = document.getElementById('client-reservations-list');
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+
+    const { data: reservations, error } = await supabaseClient
+        .from('reservations')
+        .select(`*, services(name)`)
+        .eq('client_id', user.id)
+        .order('reservation_date', { ascending: false });
+
+    if (error) {
+        listContainer.innerHTML = '<p>Gagal memuat riwayat reservasi.</p>';
+        return;
+    }
+    
+    if (reservations.length === 0) {
+        listContainer.innerHTML = '<p>Anda belum memiliki reservasi.</p>';
+        return;
+    }
+    
+    listContainer.innerHTML = reservations.map(res => `
+        <div class="reservation-item">
+            <p><strong>Layanan:</strong> ${res.services.name}</p>
+            <p><strong>Tanggal:</strong> ${res.reservation_date} - Jam ${res.start_time.substring(0, 5)}</p>
+            <p><strong>Status:</strong> <span class="status-${res.status}">${res.status}</span></p>
+        </div>
+    `).join('');
+}
+
+    
+    
+    
     document.addEventListener('DOMContentLoaded', function() {
         // Pilih semua tautan di header yang mengarah ke anchor
         const navLinks = document.querySelectorAll('header .nav-links a[href^="#"]');
