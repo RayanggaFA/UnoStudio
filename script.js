@@ -411,39 +411,27 @@ document.getElementById('booking-form').addEventListener('submit', async (e) => 
         return;
     }
 
-    // 3. Buat transaksi Midtrans Snap
-    const orderId = "ORDER-" + reservation.id + "-" + Date.now();
-
-    const snapReq = await fetch("https://api.sandbox.midtrans.com/v1/payment-links", {
-        method: "POST",
-        headers: {
-            "Authorization": "Basic " + btoa("Mid-server-KEYANDA:"),
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            transaction_details: {
-                order_id: orderId,
-                gross_amount: service.price
-            },
-            item_details: [{
-                id: reservation.id,
-                name: serviceName,
-                price: service.price,
-                quantity: 1
-            }],
-            customer_details: {
-                email: (await supabase.auth.getUser()).data.user.email
-            }
-        })
-    });
-
-    const snapData = await snapReq.json();
-
-    if (snapData.error) {
-        alert("Gagal membuat pembayaran.");
-        console.log(snapData);
-        return;
+    // 3. Panggil Supabase Function create-transaction
+const { data: snapData, error: snapError } = await supabase.functions.invoke(
+  "create-transaction",
+  {
+    body: {
+      reservation_id: reservation.id,
+      service_name: serviceName,
+      gross_amount: service.price,
     }
+  }
+);
+
+if (snapError) {
+  alert("Gagal membuat transaksi.");
+  console.log(snapError);
+  return;
+}
+
+// Redirect ke Payment Link Midtrans
+window.location.href = snapData.payment_url;
+
 
     // 4. Redirect user ke snap_url pembayaran
     window.location.href = snapData.payment_url;
