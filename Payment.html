@@ -53,7 +53,19 @@
         </form>
     </div>
 
-    <script src="https://app.midtrans.com/snap/snap.js" data-client-key="Mid-client-HNtSPnBnCaLGdEQL"></script>
+    <script src="https://app.midtrans.com/snap/snap.js" data-client-key="YOUR_CLIENT_KEY"></script>
     <script src="payment.js"></script>
+<script>
+// Redirect ke halaman pembayaran saat submit
+const bookingForm = document.getElementById('booking-form');
+bookingForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const service = document.getElementById('service-select').value;
+    const date = document.getElementById('reservation-date').value;
+    const notes = document.getElementById('notes').value;
+    localStorage.setItem('booking_data', JSON.stringify({ service, date, notes }));
+    window.location.href = 'payment.html';
+});
+</script>
 </body>
 </html>
