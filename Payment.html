@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Form Pembayaran Studio</title>
+    <link rel="stylesheet" href="payment.css" />
+</head>
+<body>
+    <div class="container">
+        <h2>Form Pembayaran Reservasi Studio</h2>
+        <form id="paymentForm">
+            <div class="form-group">
+                <label>Nama Lengkap</label>
+                <input type="text" id="fullname" required />
+            </div>
+
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="email" required />
+            </div>
+
+            <div class="form-group">
+                <label>Nomor Telepon</label>
+                <input type="text" id="phone" required />
+            </div>
+
+            <div class="form-group">
+                <label>Jenis Studio</label>
+                <select id="studio_type" required>
+                    <option value="Studio A">Studio A</option>
+                    <option value="Studio B">Studio B</option>
+                    <option value="Studio C">Studio C</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Tanggal Reservasi</label>
+                <input type="date" id="date" required />
+            </div>
+
+            <div class="form-group">
+                <label>Jam</label>
+                <input type="time" id="time" required />
+            </div>
+
+            <div class="form-group">
+                <label>Durasi (jam)</label>
+                <input type="number" id="duration" min="1" required />
+            </div>
+
+            <button type="submit" id="payBtn">Bayar Sekarang</button>
+        </form>
+    </div>
+
+    <script src="https://app.midtrans.com/snap/snap.js" data-client-key="Mid-client-HNtSPnBnCaLGdEQL"></script>
+    <script src="payment.js"></script>
+</body>
+</html>

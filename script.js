@@ -661,5 +661,49 @@ function initializePhotoCards() {
     }
 }
 
+async function createPayment(orderId, amount, name, email) {
+    const { data, error } = await supabaseClient.functions.invoke('create-transaction', {
+        body: {
+            order_id: orderId,
+            amount: amount,
+            customer_name: name,
+            customer_email: email
+        }
+    });
+
+    if (error) {
+        console.error(error);
+        alert("Gagal membuat transaksi");
+        return;
+    }
+
+    const snapToken = data.token;
+
+    snap.pay(snapToken, {
+        onSuccess: async function(result) {
+            await savePaymentToSupabase(orderId, result);
+        },
+        onPending: function(result) {
+            console.log("Pending", result);
+        },
+        onError: function(result) {
+            console.error("Error", result);
+        }
+    });
+}
+async function savePaymentToSupabase(orderId, result) {
+    await supabaseClient.from('payments').insert({
+        order_id: orderId,
+        amount: result.gross_amount,
+        payment_status: result.transaction_status,
+        payment_method: result.payment_type,
+        transaction_id: result.transaction_id,
+        snap_token: result.token,
+        customer_name: result.customer_details?.first_name,
+        customer_email: result.customer_details?.email
+    });
+}
+
+
 // Make functions globally available for onclick handlers
 window.updateReservationStatus = updateReservationStatus;
