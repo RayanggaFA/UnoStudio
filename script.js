@@ -311,8 +311,14 @@ async function populateServicesDropdown() {
     const { data: services, error } = await supabaseClient.from('services').select('*');
     if (error) return;
 
+    // PERBAIKAN: Tambahkan data-price attribute
     selectElement.innerHTML = services.map(service => 
-        `<option value="${service.id}" data-duration="${service.duration_minutes}">${service.name} - Rp${service.price}</option>`
+        `<option value="${service.id}" 
+                 data-name="${service.name}"
+                 data-price="${service.price}"
+                 data-duration="${service.duration_minutes}">
+            ${service.name} - Rp ${service.price.toLocaleString('id-ID')}
+        </option>`
     ).join('');
 }
 
@@ -740,10 +746,11 @@ function updateBookingSummary() {
     }
     
     const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
-    const serviceName = selectedOption.textContent.split(' - ')[0];
-    const priceMatch = selectedOption.textContent.match(/Rp(\d+)/);
-    const price = priceMatch ? parseInt(priceMatch[1]) : 0;
-    const durationMinutes = parseInt(selectedOption.dataset.duration);
+    
+    // FIX: Ambil dari data attribute, bukan dari text
+    const serviceName = selectedOption.dataset.name || selectedOption.textContent.split(' - ')[0];
+    const price = parseInt(selectedOption.dataset.price) || 0;
+    const durationMinutes = parseInt(selectedOption.dataset.duration) || 0;
     const durationHours = durationMinutes / 60;
     
     const startTime = selectedTimeSlot;
@@ -751,7 +758,13 @@ function updateBookingSummary() {
     endTimeObj.setMinutes(endTimeObj.getMinutes() + durationMinutes);
     const endTime = endTimeObj.toTimeString().substring(0, 5);
     
-    const total = price * durationHours;
+    const total = Math.round(price * durationHours); // Bulatkan untuk avoid decimal
+    
+    console.log('=== Booking Summary Debug ===');
+    console.log('Service:', serviceName);
+    console.log('Price per hour:', price);
+    console.log('Duration (hours):', durationHours);
+    console.log('Total:', total);
     
     // Store current service data
     currentServiceData = {
