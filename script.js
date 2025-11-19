@@ -661,5 +661,328 @@ function initializePhotoCards() {
     }
 }
 
+// ==================== PAYMENT INTEGRATION ====================
+// TAMBAHAN untuk integrasi Midtrans Payment
+
+let currentServiceData = null;
+
+// GANTI fungsi loadClientDashboard yang sudah ada dengan ini:
+async function loadClientDashboard() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+        window.location.href = 'login.html';
+        return;
+    }
+    
+    await populateServicesDropdown();
+    await fetchAndDisplayClientReservations();
+    await fetchAndDisplayPaymentHistory(); // TAMBAHAN INI
+    
+    const dateInput = document.getElementById('reservation-date');
+    const serviceSelect = document.getElementById('service-select');
+    const bookingForm = document.getElementById('booking-form');
+    
+    // Set minimum date to today
+    if (dateInput) {
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.setAttribute('min', today);
+        dateInput.addEventListener('change', () => {
+            generateAvailableTimeSlots();
+            updateBookingSummary();
+        });
+    }
+    
+    if (serviceSelect) {
+        serviceSelect.addEventListener('change', updateBookingSummary);
+    }
+    
+    if (bookingForm) {
+        bookingForm.removeEventListener('submit', handleBookingSubmit); // Remove old listener
+        bookingForm.addEventListener('submit', (e) => {
+            e.preventDefault(); // Prevent default form submission
+            alert('Silakan pilih waktu dan klik tombol "Bayar Sekarang" untuk melanjutkan pembayaran.');
+        });
+    }
+    
+    // Payment button handler
+    const btnPay = document.getElementById('btn-pay');
+    if (btnPay) {
+        btnPay.addEventListener('click', handlePaymentClick);
+    }
+}
+
+// Override generateAvailableTimeSlots untuk tambahkan updateBookingSummary
+const originalGenerateSlots = generateAvailableTimeSlots;
+generateAvailableTimeSlots = async function() {
+    await originalGenerateSlots();
+    
+    // Add click listener untuk update summary
+    const slots = document.querySelectorAll('.time-slot:not(.disabled)');
+    slots.forEach(slot => {
+        const oldListener = slot.onclick;
+        slot.onclick = function() {
+            if (oldListener) oldListener.call(this);
+            updateBookingSummary();
+        };
+    });
+};
+
+function updateBookingSummary() {
+    const serviceSelect = document.getElementById('service-select');
+    const dateInput = document.getElementById('reservation-date');
+    const summary = document.getElementById('booking-summary');
+    
+    if (!serviceSelect || !dateInput || !summary) return;
+    
+    if (!serviceSelect.value || !dateInput.value || !selectedTimeSlot) {
+        summary.classList.remove('show');
+        return;
+    }
+    
+    const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+    const serviceName = selectedOption.textContent.split(' - ')[0];
+    const priceMatch = selectedOption.textContent.match(/Rp(\d+)/);
+    const price = priceMatch ? parseInt(priceMatch[1]) : 0;
+    const durationMinutes = parseInt(selectedOption.dataset.duration);
+    const durationHours = durationMinutes / 60;
+    
+    const startTime = selectedTimeSlot;
+    const endTimeObj = new Date(`1970-01-01T${startTime}:00`);
+    endTimeObj.setMinutes(endTimeObj.getMinutes() + durationMinutes);
+    const endTime = endTimeObj.toTimeString().substring(0, 5);
+    
+    const total = price * durationHours;
+    
+    // Store current service data
+    currentServiceData = {
+        service_id: serviceSelect.value,
+        service_name: serviceName,
+        reservation_date: dateInput.value,
+        start_time: startTime + ':00',
+        end_time: endTime + ':00',
+        price: price,
+        duration_hours: durationHours,
+        total_amount: total
+    };
+    
+    // Update summary display
+    document.getElementById('summary-service').textContent = serviceName;
+    document.getElementById('summary-date').textContent = formatDate(dateInput.value);
+    document.getElementById('summary-time').textContent = `${startTime} - ${endTime}`;
+    document.getElementById('summary-duration').textContent = `${durationHours} Jam`;
+    document.getElementById('summary-price-per-hour').textContent = `Rp ${price.toLocaleString('id-ID')}`;
+    document.getElementById('summary-total').textContent = `Rp ${total.toLocaleString('id-ID')}`;
+    
+    summary.classList.add('show');
+}
+
+async function handlePaymentClick() {
+    if (!currentServiceData) {
+        alert('Silakan lengkapi form booking terlebih dahulu.');
+        return;
+    }
+    
+    const btnPay = document.getElementById('btn-pay');
+    btnPay.disabled = true;
+    btnPay.textContent = '⏳ Memproses pembayaran...';
+    
+    try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) {
+            alert('Sesi berakhir. Silakan login kembali.');
+            window.location.href = 'login.html';
+            return;
+        }
+        
+        // Get user profile
+        const { data: profile } = await supabaseClient
+            .from('profiles')
+            .select('full_name, phone_number')
+            .eq('id', user.id)
+            .single();
+        
+        const notes = document.getElementById('notes').value;
+        
+        // Prepare payment data
+        const paymentData = {
+            ...currentServiceData,
+            notes: notes || '',
+            customer_name: profile.full_name,
+            customer_email: user.email,
+            customer_phone: profile.phone_number
+        };
+        
+        // Call Edge Function
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        
+        const response = await fetch(
+            `${SUPABASE_URL}/functions/v1/create-payment`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify(paymentData)
+            }
+        );
+        
+        const result = await response.json();
+        
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Gagal memproses pembayaran');
+        }
+        
+        // Open Midtrans Snap
+        window.snap.pay(result.snap_token, {
+            onSuccess: async function(paymentResult) {
+                alert('✅ Pembayaran berhasil! Reservasi Anda sedang menunggu konfirmasi admin.');
+                
+                // Reset form
+                document.getElementById('booking-form').reset();
+                document.getElementById('booking-summary').classList.remove('show');
+                document.getElementById('time-slots-container').innerHTML = 
+                    '<p>Silakan pilih tanggal terlebih dahulu.</p>';
+                selectedTimeSlot = null;
+                currentServiceData = null;
+                
+                // Reload data
+                await fetchAndDisplayClientReservations();
+                await fetchAndDisplayPaymentHistory();
+                
+                btnPay.disabled = false;
+                btnPay.textContent = '💳 Bayar Sekarang';
+            },
+            onPending: function(paymentResult) {
+                alert('⏳ Pembayaran tertunda. Silakan selesaikan pembayaran Anda.');
+                btnPay.disabled = false;
+                btnPay.textContent = '💳 Bayar Sekarang';
+                fetchAndDisplayPaymentHistory();
+            },
+            onError: function(paymentResult) {
+                alert('❌ Pembayaran gagal atau dibatalkan.');
+                btnPay.disabled = false;
+                btnPay.textContent = '💳 Bayar Sekarang';
+            },
+            onClose: function() {
+                console.log('Payment popup closed by user');
+                btnPay.disabled = false;
+                btnPay.textContent = '💳 Bayar Sekarang';
+            }
+        });
+        
+    } catch (error) {
+        console.error('Payment error:', error);
+        alert('Gagal memproses pembayaran: ' + error.message);
+        btnPay.disabled = false;
+        btnPay.textContent = '💳 Bayar Sekarang';
+    }
+}
+
+// Payment History
+async function fetchAndDisplayPaymentHistory() {
+    const listContainer = document.getElementById('payment-history-list');
+    if (!listContainer) return;
+
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+
+    const { data: payments, error } = await supabaseClient
+        .from('payments')
+        .select(`
+            *,
+            services(name, price),
+            reservations(id, status)
+        `)
+        .eq('client_id', user.id)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching payments:', error);
+        listContainer.innerHTML = '<p>Gagal memuat riwayat pembayaran.</p>';
+        return;
+    }
+    
+    if (payments.length === 0) {
+        listContainer.innerHTML = '<p>Belum ada riwayat pembayaran.</p>';
+        return;
+    }
+    
+    listContainer.innerHTML = payments.map(payment => {
+        const statusBadge = getPaymentStatusBadgeHTML(payment.payment_status);
+        const reservationStatus = payment.reservations 
+            ? `<p><strong>Status Reservasi:</strong> <span class="status-${payment.reservations.status}">${payment.reservations.status}</span></p>`
+            : '';
+        const payButton = (payment.payment_status === 'unpaid' || payment.payment_status === 'pending') && payment.snap_token
+            ? `<button onclick="retryPayment('${payment.snap_token}')" class="retry-pay-btn">Lanjutkan Pembayaran</button>`
+            : '';
+        
+        return `
+            <div class="payment-item">
+                <div class="payment-header">
+                    <strong>${payment.services?.name || 'N/A'}</strong>
+                    ${statusBadge}
+                </div>
+                <p><strong>Order ID:</strong> ${payment.order_id}</p>
+                <p><strong>Tanggal:</strong> ${formatDate(payment.reservation_date)} | ${payment.start_time.substring(0,5)} - ${payment.end_time.substring(0,5)}</p>
+                <p><strong>Total:</strong> Rp ${payment.amount.toLocaleString('id-ID')}</p>
+                ${payment.payment_method ? `<p><strong>Metode:</strong> ${payment.payment_method}</p>` : ''}
+                ${reservationStatus}
+                <p style="font-size: 12px; color: #999; margin-top: 10px;">Dibuat: ${formatDateTime(payment.created_at)}</p>
+                ${payButton}
+            </div>
+        `;
+    }).join('');
+}
+
+function getPaymentStatusBadgeHTML(status) {
+    const badges = {
+        'paid': '<span class="badge badge-success">✓ Lunas</span>',
+        'pending': '<span class="badge badge-warning">⏳ Pending</span>',
+        'unpaid': '<span class="badge badge-danger">✗ Belum Bayar</span>',
+        'failed': '<span class="badge badge-danger">✗ Gagal</span>',
+        'expired': '<span class="badge badge-secondary">⊘ Expired</span>',
+    };
+    return badges[status] || `<span class="badge">${status}</span>`;
+}
+
+async function retryPayment(snapToken) {
+    try {
+        window.snap.pay(snapToken, {
+            onSuccess: async function() {
+                alert('✅ Pembayaran berhasil!');
+                await fetchAndDisplayClientReservations();
+                await fetchAndDisplayPaymentHistory();
+            },
+            onPending: function() {
+                alert('⏳ Menunggu pembayaran.');
+                fetchAndDisplayPaymentHistory();
+            },
+            onError: function() {
+                alert('❌ Pembayaran gagal.');
+            },
+            onClose: function() {
+                console.log('Payment popup closed');
+            }
+        });
+    } catch (error) {
+        alert('Gagal membuka pembayaran: ' + error.message);
+    }
+}
+
+function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    return date.toLocaleDateString('id-ID', options);
+}
+
+function formatDateTime(datetimeStr) {
+    const date = new Date(datetimeStr);
+    return date.toLocaleDateString('id-ID') + ' ' + date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+}
+
+// Make functions globally available
+window.retryPayment = retryPayment;
+
 // Make functions globally available for onclick handlers
 window.updateReservationStatus = updateReservationStatus;

@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="text/javascript"
+        src="https://app.sandbox.midtrans.com/snap/snap.js"
+        data-client-key="Mid-client-HNtSPnBnCaLGdEQL"></script>
     <title>Client Dashboard - UNO Studio</title>
     <link rel="stylesheet" href="dashboard.css">
 </head>
@@ -43,6 +46,38 @@
                     </div>
                     <button type="submit" class="cta-button">Booking Sekarang</button>
                 </form>
+                <!-- Booking Summary (akan muncul setelah pilih service, tanggal, dan jam) -->
+                <div id="booking-summary" class="booking-summary">
+                    <h3>📋 Ringkasan Booking</h3>
+                    <div class="summary-row">
+                        <span class="summary-label">Layanan</span>
+                        <span class="summary-value" id="summary-service">-</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Tanggal</span>
+                        <span class="summary-value" id="summary-date">-</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Waktu</span>
+                        <span class="summary-value" id="summary-time">-</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Durasi</span>
+                        <span class="summary-value" id="summary-duration">-</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Harga per Jam</span>
+                        <span class="summary-value" id="summary-price-per-hour">-</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Total Pembayaran</span>
+                        <span class="summary-value" id="summary-total">Rp 0</span>
+                    </div>
+                    
+                    <button type="button" id="btn-pay" class="btn-pay">
+                        💳 Bayar Sekarang
+                    </button>
+                </div>
             </div>
 
             <!-- Kolom untuk melihat riwayat reservasi -->
