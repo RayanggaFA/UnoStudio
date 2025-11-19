@@ -5,36 +5,35 @@ serve(async (req) => {
     const body = await req.json();
 
     const serverKey = Deno.env.get("MIDTRANS_SERVER_KEY");
+    const authHeader = "Basic " + btoa(serverKey + ":");
 
-    const auth = "Basic " + btoa(serverKey + ":");
-
-    const midtrans = await fetch(
+    const midtransRes = await fetch(
       "https://api.sandbox.midtrans.com/v1/payment-links",
       {
         method: "POST",
         headers: {
-          "Authorization": auth,
           "Content-Type": "application/json",
+          "Authorization": authHeader
         },
         body: JSON.stringify({
           transaction_details: {
-            order_id: "ORDER-" + body.reservation_id + "-" + Date.now(),
-            gross_amount: body.gross_amount,
+            order_id: crypto.randomUUID(),
+            gross_amount: 100000
           },
-          item_details: [{
-            id: body.reservation_id,
-            name: body.service_name,
-            quantity: 1,
-            price: body.gross_amount,
-          }]
+          customer_details: {
+            first_name: body.fullname,
+            email: body.email,
+            phone: body.phone,
+          }
         })
       }
     );
 
-    const result = await midtrans.json();
-    return Response.json(result);
-
+    const data = await midtransRes.json();
+    return new Response(JSON.stringify(data), { status: 200 });
   } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500
+    });
   }
 });

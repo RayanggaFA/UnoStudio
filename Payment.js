@@ -8,13 +8,13 @@ document.getElementById('paymentForm').addEventListener('submit', async (e) => {
     };
 
     const response = await fetch("https://gqkpcvcnuchbboslopcx.functions.supabase.co/create-transaction", {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
-        },
-        body: JSON.stringify(data)
-    });
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify(data)
+});
+
 
     const result = await response.json();
 
