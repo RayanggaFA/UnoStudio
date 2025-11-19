@@ -3,7 +3,6 @@
 
 document.getElementById('paymentForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const data = {
         fullname: document.getElementById('fullname').value,
         email: document.getElementById('email').value,
@@ -14,7 +13,8 @@ document.getElementById('paymentForm').addEventListener('submit', async (e) => {
         duration: document.getElementById('duration').value
     };
 
-    const response = await fetch('https://supabase.com/dashboard/project/gqkpcvcnuchbboslopcx/functions', {
+    const response = await fetch('https://gqkpcvcnuchbboslopcx.functions.supabase.co/create-transaction', {
+
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)

@@ -373,6 +373,83 @@ async function generateAvailableTimeSlots() {
     });
 }
 
+
+document.getElementById('booking-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const serviceName = document.getElementById('service-select').value;
+    const date = document.getElementById('reservation-date').value;
+    const notes = document.getElementById('notes').value;
+
+    // 1. Ambil data layanan dari Supabase
+    const { data: service, error: sErr } = await supabase
+        .from('services')
+        .select('*')
+        .eq('name', serviceName)
+        .single();
+
+    if (sErr || !service) {
+        alert("Gagal mengambil data layanan.");
+        return;
+    }
+
+    // 2. Buat reservasi PENDING
+    const { data: reservation, error: rErr } = await supabase
+        .from('reservations')
+        .insert([{
+            service_name: serviceName,
+            date: date,
+            price: service.price,
+            notes: notes,
+            status: 'pending'
+        }])
+        .select()
+        .single();
+
+    if (rErr) {
+        alert("Gagal membuat reservasi.");
+        return;
+    }
+
+    // 3. Buat transaksi Midtrans Snap
+    const orderId = "ORDER-" + reservation.id + "-" + Date.now();
+
+    const snapReq = await fetch("https://api.sandbox.midtrans.com/v1/payment-links", {
+        method: "POST",
+        headers: {
+            "Authorization": "Basic " + btoa("Mid-server-KEYANDA:"),
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            transaction_details: {
+                order_id: orderId,
+                gross_amount: service.price
+            },
+            item_details: [{
+                id: reservation.id,
+                name: serviceName,
+                price: service.price,
+                quantity: 1
+            }],
+            customer_details: {
+                email: (await supabase.auth.getUser()).data.user.email
+            }
+        })
+    });
+
+    const snapData = await snapReq.json();
+
+    if (snapData.error) {
+        alert("Gagal membuat pembayaran.");
+        console.log(snapData);
+        return;
+    }
+
+    // 4. Redirect user ke snap_url pembayaran
+    window.location.href = snapData.payment_url;
+});
+
+
 async function handleBookingSubmit(e) {
     e.preventDefault();
 

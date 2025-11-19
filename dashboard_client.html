@@ -55,6 +55,59 @@
         </div>
     </main>
 
+<script src="https://app.midtrans.com/snap/snap.js" data-client-key="Mid-client-HNtSPnBnCaLGdEQL"></script>
+
+<script>
+// Ambil user login
+const supabaseClient = supabase.createClient(
+  "https://gqkpcvcnuchbboslopcx.supabase.co",
+  "PUBLIC_ANON_KEY"
+);
+
+// Ketika form booking dikirim
+document.getElementById("booking-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const {
+        data: { user }
+    } = await supabaseClient.auth.getUser();
+
+    if (!user) {
+        alert("Silakan login terlebih dahulu.");
+        return;
+    }
+
+    const payload = {
+        user_id: user.id,
+        fullname: user.user_metadata.fullname ?? "User",
+        email: user.email,
+        service: document.getElementById("service-select").value,
+        date: document.getElementById("reservation-date").value,
+        time: document.getElementById("time-slots-container").dataset.selected,
+        notes: document.getElementById("notes").value,
+    };
+
+    const response = await fetch(
+        "https://gqkpcvcnuchbboslopcx.supabase.co/functions/v1/create-transaction",
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        }
+    );
+
+    const result = await response.json();
+
+    if (result.token) {
+        window.snap.pay(result.token);
+    } else {
+        alert("Gagal membuat transaksi");
+        console.log(result);
+    }
+});
+</script>
+
+
     <!-- Supabase & Script -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>

@@ -1,50 +1,44 @@
-import { serve } from "https://deno.land/x/supabase_edge_functions@1.3.3/mod.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 serve(async (req) => {
   try {
-    const { order_id, gross_amount, customer_name, customer_email } =
-      await req.json();
+    const body = await req.json();
 
     const serverKey = Deno.env.get("MIDTRANS_SERVER_KEY");
-    if (!serverKey) {
-      return new Response(JSON.stringify({ error: "Server key missing" }), {
-        status: 500,
-      });
-    }
-
     const auth = "Basic " + btoa(serverKey + ":");
 
     const midtransResponse = await fetch(
-      "https://api.sandbox.midtrans.com/v2/charge",
+      "https://api.sandbox.midtrans.com/v1/payment-links",
       {
         method: "POST",
         headers: {
-          Authorization: auth,
+          "Authorization": auth,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          payment_type: "bank_transfer",
           transaction_details: {
-            order_id,
-            gross_amount,
+            order_id: crypto.randomUUID(),
+            gross_amount: 100000
           },
           customer_details: {
-            first_name: customer_name,
-            email: customer_email,
-          },
-          bank_transfer: {
-            bank: "bca",
-          },
+            first_name: body.fullname,
+            email: body.email,
+            phone: "08123"
+          }
         }),
       }
     );
 
     const data = await midtransResponse.json();
 
-    return new Response(JSON.stringify(data), {
+    return new Response(JSON.stringify({ token: data.token }), {
       headers: { "Content-Type": "application/json" },
     });
+
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 400 });
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 });
