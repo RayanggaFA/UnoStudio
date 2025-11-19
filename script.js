@@ -373,84 +373,18 @@ async function generateAvailableTimeSlots() {
     });
 }
 
-
-document.getElementById('booking-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const serviceName = document.getElementById('service-select').value;
-    const date = document.getElementById('reservation-date').value;
-    const notes = document.getElementById('notes').value;
-
-    // 1. Ambil data layanan dari Supabase
-    const { data: service, error: sErr } = await supabase
-        .from('services')
-        .select('*')
-        .eq('name', serviceName)
-        .single();
-
-    if (sErr || !service) {
-        alert("Gagal mengambil data layanan.");
-        return;
-    }
-
-    // 2. Buat reservasi PENDING
-    const { data: reservation, error: rErr } = await supabase
-        .from('reservations')
-        .insert([{
-            service_name: serviceName,
-            date: date,
-            price: service.price,
-            notes: notes,
-            status: 'pending'
-        }])
-        .select()
-        .single();
-
-    if (rErr) {
-        alert("Gagal membuat reservasi.");
-        return;
-    }
-
-    // 3. Panggil Supabase Function create-transaction
-const { data: snapData, error: snapError } = await supabase.functions.invoke(
-  "create-transaction",
-  {
-    body: {
-      reservation_id: reservation.id,
-      service_name: serviceName,
-      gross_amount: service.price,
-    }
-  }
-);
-
-if (snapError) {
-  alert("Gagal membuat transaksi.");
-  console.log(snapError);
-  return;
-}
-
-// Redirect ke Payment Link Midtrans
-window.location.href = snapData.payment_url;
-
-
-    // 4. Redirect user ke snap_url pembayaran
-    window.location.href = snapData.payment_url;
-});
-
-
 async function handleBookingSubmit(e) {
     e.preventDefault();
-
+    
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
-        alert('Sesi Anda berakhir. Silakan login ulang.');
+        alert('Sesi Anda telah berakhir. Silakan login kembali.');
         window.location.href = 'login.html';
         return;
     }
-
+    
     const serviceSelect = document.getElementById('service-select');
     const serviceId = serviceSelect.value;
-    const serviceName = serviceSelect.options[serviceSelect.selectedIndex].textContent;
     const duration = serviceSelect.options[serviceSelect.selectedIndex].dataset.duration;
     const reservationDate = document.getElementById('reservation-date').value;
     const notes = document.getElementById('notes').value;
@@ -460,32 +394,13 @@ async function handleBookingSubmit(e) {
         return;
     }
 
-    // Hitung waktu selesai
+    const [hours, minutes] = selectedTimeSlot.split(':').map(Number);
     const startTime = `${selectedTimeSlot}:00`;
     const endTimeObj = new Date(`1970-01-01T${startTime}`);
     endTimeObj.setMinutes(endTimeObj.getMinutes() + parseInt(duration));
     const endTime = endTimeObj.toTimeString().split(' ')[0];
-
-    // =============================
-    // 1. Buat ORDER ID untuk pembayaran
-    // =============================
-    const orderId = `RES-${Date.now()}`;
     
-    // Contoh harga ambil dari service (pisahkan harga dari teks)
-    const price = parseInt(serviceName.match(/\d+/g)?.join("") || "0");
-
-    // =============================
-    // 2. Panggil fungsi pembayaran Midtrans
-    // =============================
-    await createPayment(orderId, price, user.email, user.email);
-
-    // =============================
-    // 3. Setelah pembayaran sukses → insert reservasi
-    // createPayment() akan memanggil 'savePaymentToSupabase'
-    // kamu perlu tambahkan callback sukses disana
-    // =============================
-
-    window.onPaymentSuccess = async function () {
+    try {
         const { error } = await supabaseClient.from('reservations').insert([{
             client_id: user.id,
             service_id: serviceId,
@@ -493,18 +408,20 @@ async function handleBookingSubmit(e) {
             start_time: startTime,
             end_time: endTime,
             status: 'pending',
-            notes: notes,
-            order_id: orderId
+            notes: notes
         }]);
 
-        if (error) {
-            alert("Gagal menyimpan reservasi: " + error.message);
-            return;
-        }
+        if (error) throw error;
 
-        alert("Pembayaran berhasil! Reservasi Anda menunggu konfirmasi admin.");
+        alert('Reservasi berhasil dibuat! Menunggu konfirmasi dari admin.');
         await fetchAndDisplayClientReservations();
-    };
+        document.getElementById('booking-form').reset();
+        document.getElementById('time-slots-container').innerHTML = '<p>Silakan pilih tanggal terlebih dahulu.</p>';
+        selectedTimeSlot = null;
+
+    } catch (error) {
+        alert('Gagal membuat reservasi: ' + error.message);
+    }
 }
 
 async function fetchAndDisplayClientReservations() {
@@ -743,53 +660,6 @@ function initializePhotoCards() {
         });
     }
 }
-
-async function createPayment(orderId, amount, name, email) {
-    const { data, error } = await supabaseClient.functions.invoke('create-transaction', {
-        body: {
-            order_id: orderId,
-            amount: amount,
-            customer_name: name,
-            customer_email: email
-        }
-    });
-
-    if (error) {
-        console.error(error);
-        alert("Gagal membuat transaksi");
-        return;
-    }
-
-    const snapToken = data.token;
-
-    snap.pay(snapToken, {
-        onSuccess: async function(result) {
-            await savePaymentToSupabase(orderId, result);
-            window.onPaymentSuccess(); 
-        },
-        onPending: function(result) {
-            console.log("Pending", result);
-        },
-        onError: function(result) {
-            console.error("Error", result);
-        }
-    });
-}
-
-
-async function savePaymentToSupabase(orderId, result) {
-    await supabaseClient.from('payments').insert({
-        order_id: orderId,
-        amount: result.gross_amount,
-        payment_status: result.transaction_status,
-        payment_method: result.payment_type,
-        transaction_id: result.transaction_id,
-        snap_token: result.token,
-        customer_name: result.customer_details?.first_name,
-        customer_email: result.customer_details?.email
-    });
-}
-
 
 // Make functions globally available for onclick handlers
 window.updateReservationStatus = updateReservationStatus;
