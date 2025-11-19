@@ -375,16 +375,17 @@ async function generateAvailableTimeSlots() {
 
 async function handleBookingSubmit(e) {
     e.preventDefault();
-    
+
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
-        alert('Sesi Anda telah berakhir. Silakan login kembali.');
+        alert('Sesi Anda berakhir. Silakan login ulang.');
         window.location.href = 'login.html';
         return;
     }
-    
+
     const serviceSelect = document.getElementById('service-select');
     const serviceId = serviceSelect.value;
+    const serviceName = serviceSelect.options[serviceSelect.selectedIndex].textContent;
     const duration = serviceSelect.options[serviceSelect.selectedIndex].dataset.duration;
     const reservationDate = document.getElementById('reservation-date').value;
     const notes = document.getElementById('notes').value;
@@ -394,13 +395,32 @@ async function handleBookingSubmit(e) {
         return;
     }
 
-    const [hours, minutes] = selectedTimeSlot.split(':').map(Number);
+    // Hitung waktu selesai
     const startTime = `${selectedTimeSlot}:00`;
     const endTimeObj = new Date(`1970-01-01T${startTime}`);
     endTimeObj.setMinutes(endTimeObj.getMinutes() + parseInt(duration));
     const endTime = endTimeObj.toTimeString().split(' ')[0];
+
+    // =============================
+    // 1. Buat ORDER ID untuk pembayaran
+    // =============================
+    const orderId = `RES-${Date.now()}`;
     
-    try {
+    // Contoh harga ambil dari service (pisahkan harga dari teks)
+    const price = parseInt(serviceName.match(/\d+/g)?.join("") || "0");
+
+    // =============================
+    // 2. Panggil fungsi pembayaran Midtrans
+    // =============================
+    await createPayment(orderId, price, user.email, user.email);
+
+    // =============================
+    // 3. Setelah pembayaran sukses → insert reservasi
+    // createPayment() akan memanggil 'savePaymentToSupabase'
+    // kamu perlu tambahkan callback sukses disana
+    // =============================
+
+    window.onPaymentSuccess = async function () {
         const { error } = await supabaseClient.from('reservations').insert([{
             client_id: user.id,
             service_id: serviceId,
@@ -408,20 +428,18 @@ async function handleBookingSubmit(e) {
             start_time: startTime,
             end_time: endTime,
             status: 'pending',
-            notes: notes
+            notes: notes,
+            order_id: orderId
         }]);
 
-        if (error) throw error;
+        if (error) {
+            alert("Gagal menyimpan reservasi: " + error.message);
+            return;
+        }
 
-        alert('Reservasi berhasil dibuat! Menunggu konfirmasi dari admin.');
+        alert("Pembayaran berhasil! Reservasi Anda menunggu konfirmasi admin.");
         await fetchAndDisplayClientReservations();
-        document.getElementById('booking-form').reset();
-        document.getElementById('time-slots-container').innerHTML = '<p>Silakan pilih tanggal terlebih dahulu.</p>';
-        selectedTimeSlot = null;
-
-    } catch (error) {
-        alert('Gagal membuat reservasi: ' + error.message);
-    }
+    };
 }
 
 async function fetchAndDisplayClientReservations() {
@@ -682,6 +700,7 @@ async function createPayment(orderId, amount, name, email) {
     snap.pay(snapToken, {
         onSuccess: async function(result) {
             await savePaymentToSupabase(orderId, result);
+            window.onPaymentSuccess(); 
         },
         onPending: function(result) {
             console.log("Pending", result);
@@ -691,6 +710,8 @@ async function createPayment(orderId, amount, name, email) {
         }
     });
 }
+
+
 async function savePaymentToSupabase(orderId, result) {
     await supabaseClient.from('payments').insert({
         order_id: orderId,
