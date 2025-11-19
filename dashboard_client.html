@@ -1,62 +1,114 @@
+<!-- Integrated dashboard_client + payment flow -->
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client Dashboard - UNO Studio</title>
+    <title>Client Dashboard + Payment - UNO Studio</title>
     <link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
-    <header class="dashboard-header">
-        <div class="container">
-            <a href="Uno Studio.html" class="logo">UNO STUDIO</a>
-            <button id="logout-button" class="logout-btn">Logout</button>
-        </div>
-    </header>
+<header class="dashboard-header">
+    <div class="container">
+        <a href="Uno Studio.html" class="logo">UNO STUDIO</a>
+        <button id="logout-button" class="logout-btn">Logout</button>
+    </div>
+</header>
 
-    <main class="container">
-        <div class="dashboard-grid">
-            <!-- Kolom untuk membuat reservasi -->
-            <div class="card">
-                <h2>Buat Reservasi Baru</h2>
-                <form id="booking-form">
-                    <div class="form-group">
-                        <label for="service-select">Pilih Layanan</label>
-                        <select id="service-select" required>
-                            <!-- Opsi layanan akan dimuat di sini -->
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="reservation-date">Pilih Tanggal</label>
-                        <input type="date" id="reservation-date" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Pilih Jam Tersedia</label>
-                        <div id="time-slots-container" class="time-slots">
-                            <!-- Slot waktu akan dimuat di sini -->
-                            <p>Silakan pilih tanggal terlebih dahulu.</p>
-                        </div>
-                    </div>
-                     <div class="form-group">
-                        <label for="notes">Catatan (Opsional)</label>
-                        <textarea id="notes" rows="3" placeholder="Contoh: Request background warna biru."></textarea>
-                    </div>
-                    <button type="submit" class="cta-button">Booking Sekarang</button>
-                </form>
-            </div>
-
-            <!-- Kolom untuk melihat riwayat reservasi -->
-            <div class="card">
-                <h2>Reservasi Anda</h2>
-                <div id="client-reservations-list">
-                    <!-- Daftar reservasi client akan dimuat di sini -->
+<main class="container">
+    <div class="dashboard-grid">
+        <div class="card">
+            <h2>Buat Reservasi + Pembayaran</h2>
+            <form id="booking-form">
+                <div class="form-group">
+                    <label for="service-select">Pilih Layanan</label>
+                    <select id="service-select" required></select>
                 </div>
-            </div>
-        </div>
-    </main>
 
-    <!-- Supabase & Script -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="script.js"></script>
+                <div class="form-group">
+                    <label for="reservation-date">Pilih Tanggal</label>
+                    <input type="date" id="reservation-date" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Pilih Jam Tersedia</label>
+                    <div id="time-slots-container" class="time-slots">
+                        <p>Silakan pilih tanggal terlebih dahulu.</p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Catatan (Opsional)</label>
+                    <textarea id="notes" rows="3"></textarea>
+                </div>
+
+                <button type="submit" class="cta-button">Booking & Bayar</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Reservasi Anda</h2>
+            <div id="client-reservations-list"></div>
+        </div>
+    </div>
+</main>
+
+<script src="https://app.midtrans.com/snap/snap.js" data-client-key="Mid-client-HNtSPnBnCaLGdEQL"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="script.js"></script>
+
+<script>
+const supabase = supabase.createClient(
+    "https://gqkpcvcnuchbboslopcx.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdxa3BjdmNudWNoYmJvc2xvcGN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0NDIxNTcsImV4cCI6MjA3OTAxODE1N30.-FpNiOG1HFA0-0FsV20egh1KSafcaVu-dicJHVlJXJ0"
+);
+
+// Load services
+async function loadServices() {
+    const { data } = await supabase.from("service_catalog").select();
+    const select = document.getElementById("service-select");
+    data.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s.id;
+        opt.textContent = `${s.name} (Rp ${s.price})`;
+        opt.dataset.price = s.price;
+        select.appendChild(opt);
+    });
+}
+
+// Handle booking + payment
+const form = document.getElementById("booking-form");
+form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const serviceId = document.getElementById("service-select").value;
+    const price = document.querySelector(`#service-select option[value='${serviceId}']`).dataset.price;
+    const date = document.getElementById("reservation-date").value;
+    const notes = document.getElementById("notes").value;
+
+    // Call Supabase Function create-transaction
+    const res = await fetch("https://gqkpcvcnuchbboslopcx.supabase.co/functions/v1/create-transaction", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabase._anonKey}`
+        },
+        body: JSON.stringify({ amount: Number(price), serviceId, date, notes })
+    });
+
+    const result = await res.json();
+
+    if (!result.token) {
+        alert("Gagal membuat transaksi");
+        console.log(result);
+        return;
+    }
+
+    // Open Midtrans Snap popup
+    snap.pay(result.token);
+});
+
+loadServices();
+</script>
 </body>
 </html>
