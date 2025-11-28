@@ -1017,7 +1017,6 @@ async function handlePaymentClick() {
     }
 }
 
-// Payment History
 async function fetchAndDisplayAllReservations() {
     const tableBody = document.getElementById('reservations-table-body');
     if (!tableBody) return;
