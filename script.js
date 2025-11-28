@@ -1017,61 +1017,61 @@ async function handlePaymentClick() {
     }
 }
 
-// Payment History (Admin)
-async function fetchAndDisplayAllReservations() {
-    const tableBody = document.getElementById('reservations-table-body');
-    if (!tableBody) return;
+// Payment History
+async function fetchAndDisplayPaymentHistory() {
+    const listContainer = document.getElementById('payment-history-list');
+    if (!listContainer) return;
 
-    console.log('Fetching all reservations for admin...');
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
 
-    const { data: reservations, error } = await supabaseClient
-        .from('reservations')
+    const { data: payments, error } = await supabaseClient
+        .from('payments')
         .select(`
-            id,
-            reservation_date,
-            start_time,
-            end_time,
-            status,
-            notes,
-            created_at,
-            profiles!reservations_client_id_fkey ( full_name ),
-            services ( name )
+            *,
+            services(name, price),
+            reservations(id, status)
         `)
-        .order('reservation_date', { ascending: false });
+        .eq('client_id', user.id)
+        .order('created_at', { ascending: false });
 
     if (error) {
-        console.error('Error fetching reservations:', error);
-        tableBody.innerHTML = '<tr><td colspan="7" style="color: red;">Error: ' + error.message + '</td></tr>';
+        console.error('Error fetching payments:', error);
+        listContainer.innerHTML = '<p>Gagal memuat riwayat pembayaran.</p>';
         return;
     }
-
-    console.log('Reservations fetched:', reservations);
-
-    if (!reservations || reservations.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="7">Belum ada reservasi</td></tr>';
+    
+    if (payments.length === 0) {
+        listContainer.innerHTML = '<p>Belum ada riwayat pembayaran.</p>';
         return;
     }
-
-    tableBody.innerHTML = reservations.map(res => `
-        <tr>
-            <td>${res.profiles?.full_name || 'N/A'}</td>
-            <td>${res.services?.name || 'N/A'}</td>
-            <td>${res.reservation_date}</td>
-
-            <!-- 🕒 JAM RESERVASI -->
-            <td>${res.start_time?.substring(0, 5)} - ${res.end_time?.substring(0, 5)}</td>
-
-            <td><span class="status-${res.status}">${res.status}</span></td>
-            <td>
-                ${res.status === 'pending' ? `
-                <button class="action-btn confirm-btn" onclick="updateReservationStatus('${res.id}', 'confirmed')">Confirm</button>
-                <button class="action-btn cancel-btn" onclick="updateReservationStatus('${res.id}', 'cancelled')">Cancel</button>
-                ` : '-'}
-            </td>
-        </tr>
-    `).join('');
+    
+    listContainer.innerHTML = payments.map(payment => {
+        const statusBadge = getPaymentStatusBadgeHTML(payment.payment_status);
+        const reservationStatus = payment.reservations 
+            ? `<p><strong>Status Reservasi:</strong> <span class="status-${payment.reservations.status}">${payment.reservations.status}</span></p>`
+            : '';
+        const payButton = (payment.payment_status === 'unpaid' || payment.payment_status === 'pending') && payment.snap_token
+            ? `<button onclick="retryPayment('${payment.snap_token}')" class="retry-pay-btn">Lanjutkan Pembayaran</button>`
+            : '';
+        
+        return `
+            <div class="payment-item">
+                <div class="payment-header">
+                    <strong>${payment.services?.name || 'N/A'}</strong>
+                    ${statusBadge}
+                </div>
+                <p><strong>Order ID:</strong> ${payment.order_id}</p>
+                <p><strong>Tanggal:</strong> ${formatDate(payment.reservation_date)} | ${payment.start_time.substring(0,5)} - ${payment.end_time.substring(0,5)}</p>
+                <p><strong>Total:</strong> Rp ${payment.amount.toLocaleString('id-ID')}</p>
+                ${payment.payment_method ? `<p><strong>Metode:</strong> ${payment.payment_method}</p>` : ''}
+                ${reservationStatus}
+                <p style="font-size: 12px; color: #999; margin-top: 10px;">Dibuat: ${formatDateTime(payment.created_at)}</p>
+                ${payButton}
+            </div>
+        `;
+    }).join('');
 }
-
 
 function getPaymentStatusBadgeHTML(status) {
     const badges = {
