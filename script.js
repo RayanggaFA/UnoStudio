@@ -893,6 +893,80 @@ async function handlePaymentClick() {
         window.snap.pay(result.snap_token, {
             onSuccess: async function(paymentResult) {
                 console.log('✅ Payment success:', paymentResult);
+                
+                // ========== TAMBAHAN KODE DI SINI ==========
+                try {
+                    console.log('Processing post-payment actions...');
+                    
+                    // 1. Update payment status
+                    const { error: updateError } = await supabaseClient
+                        .from('payments')
+                        .update({ 
+                            payment_status: 'paid',
+                            transaction_id: paymentResult.transaction_id || 'snap-success',
+                            paid_at: new Date().toISOString()
+                        })
+                        .eq('order_id', result.order_id);
+                    
+                    if (updateError) {
+                        console.error('❌ Failed to update payment:', updateError);
+                    } else {
+                        console.log('✅ Payment status updated to paid');
+                    }
+                    
+                    // 2. Get payment data
+                    const { data: payment, error: fetchError } = await supabaseClient
+                        .from('payments')
+                        .select('*')
+                        .eq('order_id', result.order_id)
+                        .single();
+                    
+                    if (fetchError) {
+                        console.error('❌ Failed to fetch payment:', fetchError);
+                    } else if (payment && !payment.reservation_id) {
+                        console.log('Creating reservation for payment:', payment.order_id);
+                        
+                        // 3. Create reservation
+                        const { data: reservation, error: resError } = await supabaseClient
+                            .from('reservations')
+                            .insert({
+                                client_id: payment.client_id,
+                                service_id: payment.service_id,
+                                reservation_date: payment.reservation_date,
+                                start_time: payment.start_time,
+                                end_time: payment.end_time,
+                                status: 'pending',
+                                notes: payment.notes
+                            })
+                            .select()
+                            .single();
+                        
+                        if (resError) {
+                            console.error('❌ Failed to create reservation:', resError);
+                        } else {
+                            console.log('✅ Reservation created:', reservation.id);
+                            
+                            // 4. Link payment to reservation
+                            const { error: linkError } = await supabaseClient
+                                .from('payments')
+                                .update({ reservation_id: reservation.id })
+                                .eq('order_id', result.order_id);
+                            
+                            if (linkError) {
+                                console.error('❌ Failed to link payment:', linkError);
+                            } else {
+                                console.log('✅ Payment linked to reservation');
+                            }
+                        }
+                    } else if (payment && payment.reservation_id) {
+                        console.log('ℹ️ Reservation already exists:', payment.reservation_id);
+                    }
+                    
+                } catch (e) {
+                    console.error('❌ Error in post-payment processing:', e);
+                }
+                // ========== AKHIR TAMBAHAN ==========
+                
                 alert('✅ Pembayaran berhasil! Reservasi Anda sedang menunggu konfirmasi admin.');
                 
                 // Reset form
@@ -903,12 +977,16 @@ async function handlePaymentClick() {
                 selectedTimeSlot = null;
                 currentServiceData = null;
                 
-                await fetchAndDisplayClientReservations();
-                await fetchAndDisplayPaymentHistory();
+                // Reload data dengan delay
+                setTimeout(async () => {
+                    await fetchAndDisplayClientReservations();
+                    await fetchAndDisplayPaymentHistory();
+                }, 1500); // Delay 1.5 detik untuk tunggu database update
                 
                 btnPay.disabled = false;
                 btnPay.textContent = '💳 Bayar Sekarang';
             },
+            
             onPending: function(paymentResult) {
                 console.log('⏳ Payment pending:', paymentResult);
                 alert('⏳ Pembayaran tertunda. Silakan selesaikan pembayaran Anda.');
@@ -916,12 +994,14 @@ async function handlePaymentClick() {
                 btnPay.textContent = '💳 Bayar Sekarang';
                 fetchAndDisplayPaymentHistory();
             },
+            
             onError: function(paymentResult) {
                 console.error('❌ Payment error:', paymentResult);
                 alert('❌ Pembayaran gagal atau dibatalkan.');
                 btnPay.disabled = false;
                 btnPay.textContent = '💳 Bayar Sekarang';
             },
+            
             onClose: function() {
                 console.log('🚪 Payment popup closed');
                 btnPay.disabled = false;
