@@ -1017,7 +1017,7 @@ async function handlePaymentClick() {
     }
 }
 
-// Payment History
+// Payment History (Admin)
 async function fetchAndDisplayAllReservations() {
     const tableBody = document.getElementById('reservations-table-body');
     if (!tableBody) return;
@@ -1041,14 +1041,14 @@ async function fetchAndDisplayAllReservations() {
 
     if (error) {
         console.error('Error fetching reservations:', error);
-        tableBody.innerHTML = '<tr><td colspan="6" style="color: red;">Error: ' + error.message + '</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="7" style="color: red;">Error: ' + error.message + '</td></tr>';
         return;
     }
 
     console.log('Reservations fetched:', reservations);
 
     if (!reservations || reservations.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6">Belum ada reservasi</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="7">Belum ada reservasi</td></tr>';
         return;
     }
 
@@ -1057,7 +1057,10 @@ async function fetchAndDisplayAllReservations() {
             <td>${res.profiles?.full_name || 'N/A'}</td>
             <td>${res.services?.name || 'N/A'}</td>
             <td>${res.reservation_date}</td>
-            <td>${res.start_time.substring(0, 5)} - ${res.end_time.substring(0, 5)}</td>
+
+            <!-- 🕒 JAM RESERVASI -->
+            <td>${res.start_time?.substring(0, 5)} - ${res.end_time?.substring(0, 5)}</td>
+
             <td><span class="status-${res.status}">${res.status}</span></td>
             <td>
                 ${res.status === 'pending' ? `
@@ -1068,6 +1071,7 @@ async function fetchAndDisplayAllReservations() {
         </tr>
     `).join('');
 }
+
 
 function getPaymentStatusBadgeHTML(status) {
     const badges = {
