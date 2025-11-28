@@ -177,12 +177,15 @@ th {
 
 /* Booking Summary */
 .booking-summary {
-    background: #f8f9fa;
+    background: var(--darker-blue);
     padding: 20px;
-    border-radius: 10px;
+    border-radius: 12px;
     margin: 20px 0;
     display: none;
-    border: 2px solid #667eea;
+    border: 2px solid var(--primary-color);
+    color: var(--light-text);
+    font-family: var(--body-font);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
 
 .booking-summary.show {
@@ -202,61 +205,72 @@ th {
 }
 
 .booking-summary h3 {
-    color: #667eea;
+    color: var(--primary-color);
     margin-bottom: 15px;
-    font-size: 18px;
+    font-size: 20px;
+    font-family: var(--heading-font);
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
+/* Row styling */
 .summary-row {
     display: flex;
     justify-content: space-between;
-    padding: 10px 0;
-    border-bottom: 1px solid #e0e0e0;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 .summary-row:last-child {
     border-bottom: none;
     margin-top: 10px;
-    padding-top: 15px;
-    border-top: 2px solid #667eea;
+    padding-top: 18px;
+    border-top: 2px solid var(--primary-color);
     font-weight: bold;
-    font-size: 18px;
-    color: #667eea;
+    font-size: 20px;
+    color: var(--primary-color);
 }
 
+/* Label & Value */
 .summary-row .summary-label {
-    color: #666;
+    color: var(--gray-text);
+    font-weight: 500;
 }
 
 .summary-row .summary-value {
-    color: #333;
+    color: var(--light-text);
     font-weight: 600;
 }
 
+/* Pay Button */
 .btn-pay {
     width: 100%;
     padding: 15px;
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
+    background: var(--primary-color);
+    color: var(--light-text);
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 16px;
     font-weight: bold;
     cursor: pointer;
     transition: all 0.3s;
-    margin-top: 15px;
+    margin-top: 20px;
+    text-transform: uppercase;
+    font-family: var(--heading-font);
+    letter-spacing: 1px;
 }
 
 .btn-pay:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(255, 58, 58, 0.4);
 }
 
 .btn-pay:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
-    background: #999;
+    background: #444;
 }
+
 
 /* Payment History Section */
 .payment-history-section {
