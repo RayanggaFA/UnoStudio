@@ -1028,15 +1028,9 @@ async function fetchAndDisplayPaymentHistory() {
     const { data: payments, error } = await supabaseClient
         .from('payments')
         .select(`
-            id,
-            reservation_date,
-            start_time,
-            end_time,
-            status,
-            notes,
-            created_at,
-            profiles!reservations_client_id_fkey ( full_name ),
-            services ( name )
+            *,
+            services(name, price),
+            reservations(id, status)
         `)
         .eq('client_id', user.id)
         .order('created_at', { ascending: false });
