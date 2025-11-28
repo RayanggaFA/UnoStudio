@@ -309,18 +309,25 @@ async function populateServicesDropdown() {
     if (!selectElement) return;
 
     const { data: services, error } = await supabaseClient.from('services').select('*');
-    if (error) return;
+    if (error) {
+        console.error('Error loading services:', error);
+        return;
+    }
 
-    // PERBAIKAN: Tambahkan data-price attribute
-    selectElement.innerHTML = services.map(service => 
-        `<option value="${service.id}" 
-                 data-name="${service.name}"
-                 data-price="${service.price}"
-                 data-duration="${service.duration_minutes}">
-            ${service.name} - Rp ${service.price.toLocaleString('id-ID')}
-        </option>`
-    ).join('');
+    console.log('Services loaded:', services); // DEBUG
+
+    selectElement.innerHTML = '<option value="">-- Pilih Layanan --</option>' + 
+        services.map(service => {
+            // Price SUDAH TOTAL untuk durasi, tidak perlu kalkulasi lagi
+            return `<option value="${service.id}" 
+                     data-name="${service.name}"
+                     data-price="${service.price}"
+                     data-duration="${service.duration_minutes}">
+                ${service.name} (${service.duration_minutes} menit) - Rp ${service.price.toLocaleString('id-ID')}
+            </option>`;
+        }).join('');
 }
+
 
 async function generateAvailableTimeSlots() {
     const date = document.getElementById('reservation-date').value;
@@ -746,45 +753,38 @@ function updateBookingSummary() {
     }
     
     const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+    const serviceName = selectedOption.dataset.name;
+    const totalAmount = parseInt(selectedOption.dataset.price); // Langsung pakai price, sudah total!
+    const durationMinutes = parseInt(selectedOption.dataset.duration);
     
-    // FIX: Ambil dari data attribute, bukan dari text
-    const serviceName = selectedOption.dataset.name || selectedOption.textContent.split(' - ')[0];
-    const price = parseInt(selectedOption.dataset.price) || 0;
-    const durationMinutes = parseInt(selectedOption.dataset.duration) || 0;
-    const durationHours = durationMinutes / 60;
-    
-    const startTime = selectedTimeSlot;
-    const endTimeObj = new Date(`1970-01-01T${startTime}:00`);
+    const startTime = selectedTimeSlot + ':00';
+    const endTimeObj = new Date(`1970-01-01T${startTime}`);
     endTimeObj.setMinutes(endTimeObj.getMinutes() + durationMinutes);
-    const endTime = endTimeObj.toTimeString().substring(0, 5);
+    const endTime = endTimeObj.toTimeString().substring(0, 8);
     
-    const total = Math.round(price * durationHours); // Bulatkan untuk avoid decimal
-    
-    console.log('=== Booking Summary Debug ===');
+    console.log('=== BOOKING SUMMARY DEBUG ===');
     console.log('Service:', serviceName);
-    console.log('Price per hour:', price);
-    console.log('Duration (hours):', durationHours);
-    console.log('Total:', total);
+    console.log('Total Price:', totalAmount);
+    console.log('Duration (minutes):', durationMinutes);
+    console.log('Start:', startTime, 'End:', endTime);
     
-    // Store current service data
     currentServiceData = {
         service_id: serviceSelect.value,
         service_name: serviceName,
         reservation_date: dateInput.value,
-        start_time: startTime + ':00',
-        end_time: endTime + ':00',
-        price: price,
-        duration_hours: durationHours,
-        total_amount: total
+        start_time: startTime,
+        end_time: endTime,
+        total_amount: totalAmount, // Langsung pakai
+        duration_minutes: durationMinutes
     };
     
-    // Update summary display
+    // Update display
     document.getElementById('summary-service').textContent = serviceName;
     document.getElementById('summary-date').textContent = formatDate(dateInput.value);
-    document.getElementById('summary-time').textContent = `${startTime} - ${endTime}`;
-    document.getElementById('summary-duration').textContent = `${durationHours} Jam`;
-    document.getElementById('summary-price-per-hour').textContent = `Rp ${price.toLocaleString('id-ID')}`;
-    document.getElementById('summary-total').textContent = `Rp ${total.toLocaleString('id-ID')}`;
+    document.getElementById('summary-time').textContent = `${selectedTimeSlot} - ${endTime.substring(0,5)}`;
+    document.getElementById('summary-duration').textContent = `${durationMinutes} Menit`;
+    document.getElementById('summary-price-per-hour').textContent = `Total Paket`; // Ganti label
+    document.getElementById('summary-total').textContent = `Rp ${totalAmount.toLocaleString('id-ID')}`;
     
     summary.classList.add('show');
 }
@@ -808,47 +808,91 @@ async function handlePaymentClick() {
         }
         
         // Get user profile
-        const { data: profile } = await supabaseClient
+        const { data: profile, error: profileError } = await supabaseClient
             .from('profiles')
             .select('full_name, phone_number')
             .eq('id', user.id)
             .single();
         
+        if (profileError || !profile) {
+            throw new Error('Gagal mengambil data profile: ' + (profileError?.message || 'Profile tidak ditemukan'));
+        }
+        
         const notes = document.getElementById('notes').value;
         
         // Prepare payment data
         const paymentData = {
-            ...currentServiceData,
+            service_id: currentServiceData.service_id,
+            service_name: currentServiceData.service_name,
+            reservation_date: currentServiceData.reservation_date,
+            start_time: currentServiceData.start_time,
+            end_time: currentServiceData.end_time,
+            total_amount: currentServiceData.total_amount,
             notes: notes || '',
             customer_name: profile.full_name,
             customer_email: user.email,
-            customer_phone: profile.phone_number
+            customer_phone: profile.phone_number || '08123456789'
         };
+        
+        console.log('=== PAYMENT REQUEST ===');
+        console.log('Payment Data:', paymentData);
         
         // Call Edge Function
         const { data: { session } } = await supabaseClient.auth.getSession();
         
-        const response = await fetch(
-            `${SUPABASE_URL}/functions/v1/create-payment`,
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.access_token}`,
-                },
-                body: JSON.stringify(paymentData)
-            }
-        );
+        const edgeFunctionUrl = `${SUPABASE_URL}/functions/v1/create-payment`;
+        console.log('Edge Function URL:', edgeFunctionUrl);
+        console.log('Authorization Token:', session.access_token ? 'Present' : 'Missing');
         
-        const result = await response.json();
+        const response = await fetch(edgeFunctionUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify(paymentData)
+        });
         
-        if (!response.ok || !result.success) {
+        console.log('Response Status:', response.status);
+        console.log('Response OK:', response.ok);
+        
+        const responseText = await response.text();
+        console.log('Response Text:', responseText);
+        
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (e) {
+            throw new Error('Invalid JSON response: ' + responseText);
+        }
+        
+        console.log('Parsed Result:', result);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${result.error || responseText}`);
+        }
+        
+        if (!result.success) {
             throw new Error(result.error || 'Gagal memproses pembayaran');
         }
+        
+        if (!result.snap_token) {
+            throw new Error('Snap token tidak ditemukan di response');
+        }
+        
+        console.log('Snap Token:', result.snap_token);
+        
+        // Check if snap is loaded
+        if (typeof window.snap === 'undefined') {
+            throw new Error('Midtrans Snap belum dimuat. Refresh halaman dan coba lagi.');
+        }
+        
+        console.log('Opening Midtrans Snap...');
         
         // Open Midtrans Snap
         window.snap.pay(result.snap_token, {
             onSuccess: async function(paymentResult) {
+                console.log('✅ Payment success:', paymentResult);
                 alert('✅ Pembayaran berhasil! Reservasi Anda sedang menunggu konfirmasi admin.');
                 
                 // Reset form
@@ -859,7 +903,6 @@ async function handlePaymentClick() {
                 selectedTimeSlot = null;
                 currentServiceData = null;
                 
-                // Reload data
                 await fetchAndDisplayClientReservations();
                 await fetchAndDisplayPaymentHistory();
                 
@@ -867,25 +910,27 @@ async function handlePaymentClick() {
                 btnPay.textContent = '💳 Bayar Sekarang';
             },
             onPending: function(paymentResult) {
+                console.log('⏳ Payment pending:', paymentResult);
                 alert('⏳ Pembayaran tertunda. Silakan selesaikan pembayaran Anda.');
                 btnPay.disabled = false;
                 btnPay.textContent = '💳 Bayar Sekarang';
                 fetchAndDisplayPaymentHistory();
             },
             onError: function(paymentResult) {
+                console.error('❌ Payment error:', paymentResult);
                 alert('❌ Pembayaran gagal atau dibatalkan.');
                 btnPay.disabled = false;
                 btnPay.textContent = '💳 Bayar Sekarang';
             },
             onClose: function() {
-                console.log('Payment popup closed by user');
+                console.log('🚪 Payment popup closed');
                 btnPay.disabled = false;
                 btnPay.textContent = '💳 Bayar Sekarang';
             }
         });
         
     } catch (error) {
-        console.error('Payment error:', error);
+        console.error('💥 PAYMENT ERROR:', error);
         alert('Gagal memproses pembayaran: ' + error.message);
         btnPay.disabled = false;
         btnPay.textContent = '💳 Bayar Sekarang';
