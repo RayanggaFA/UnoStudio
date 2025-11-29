@@ -332,7 +332,8 @@ async function fetchAndDisplayAllReservations() {
                 </td>
             </tr>
         `).join('');
-
+         console.log("PROFILE RESULT:", res.profiles);
+                   
         console.log('✅ Table rendered successfully');
 
     } catch (error) {
