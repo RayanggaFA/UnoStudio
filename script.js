@@ -205,63 +205,140 @@ async function redirectToDashboard() {
 // ==================== ADMIN DASHBOARD ====================
 
 async function loadAdminDashboard() {
+    console.log('=== LOADING ADMIN DASHBOARD ===');
+    
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
+        console.error('No user found, redirecting to login');
         window.location.href = 'login.html';
         return;
     }
     
-    const { data: profile } = await supabaseClient
+    console.log('User logged in:', user.email);
+    
+    const { data: profile, error } = await supabaseClient
         .from('profiles')
         .select('role')
         .eq('id', user.id)
         .single();
     
+    if (error) {
+        console.error('Error fetching profile:', error);
+        alert('Error: ' + error.message);
+        return;
+    }
+    
+    console.log('Profile role:', profile?.role);
+    
     if (!profile || profile.role !== 'admin') {
-        alert('Akses ditolak.');
+        console.error('User is not admin');
+        alert('Akses ditolak. Anda bukan admin.');
         window.location.href = 'dashboard_client.html';
         return;
     }
     
+    console.log('Admin access granted, fetching reservations...');
     await fetchAndDisplayAllReservations();
 }
 
 async function fetchAndDisplayAllReservations() {
     const tableBody = document.getElementById('reservations-table-body');
-    if (!tableBody) return;
-
-    const { data: reservations, error } = await supabaseClient
-        .from('reservations')
-        .select(`
-            id,
-            reservation_date,
-            start_time,
-            status,
-            profiles ( full_name ),
-            services ( name )
-        `)
-        .order('reservation_date', { ascending: false });
-
-    if (error) {
-        console.error('Error fetching reservations:', error);
+    if (!tableBody) {
+        console.error('Element reservations-table-body not found!');
         return;
     }
 
-    tableBody.innerHTML = reservations.map(res => `
-        <tr>
-            <td>${res.profiles.full_name}</td>
-            <td>${res.services.name}</td>
-            <td>${res.reservation_date}</td>
-            <td>${res.start_time.substring(0, 5)}</td>
-            <td><span class="status-${res.status}">${res.status}</span></td>
-            <td>
-                ${res.status === 'pending' ? `
-                <button class="action-btn confirm-btn" onclick="updateReservationStatus('${res.id}', 'confirmed')">Confirm</button>
-                <button class="action-btn cancel-btn" onclick="updateReservationStatus('${res.id}', 'cancelled')">Cancel</button>
-                ` : ''}
-            </td>
-        </tr>
-    `).join('');
+    console.log('=== FETCHING RESERVATIONS FOR ADMIN ===');
+
+    try {
+        // Check if user is authenticated
+        const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+        
+        if (authError || !user) {
+            console.error('Auth error:', authError);
+            tableBody.innerHTML = '<tr><td colspan="6" style="color: red;">Not authenticated. Please login.</td></tr>';
+            return;
+        }
+
+        console.log('User authenticated:', user.email);
+
+        // Check if user is admin
+        const { data: profile, error: profileError } = await supabaseClient
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+        if (profileError || !profile) {
+            console.error('Profile error:', profileError);
+            tableBody.innerHTML = '<tr><td colspan="6" style="color: red;">Failed to fetch profile</td></tr>';
+            return;
+        }
+
+        console.log('User role:', profile.role);
+
+        if (profile.role !== 'admin') {
+            tableBody.innerHTML = '<tr><td colspan="6" style="color: red;">Access denied. Admin only.</td></tr>';
+            return;
+        }
+
+        // Fetch reservations
+        const { data: reservations, error } = await supabaseClient
+            .from('reservations')
+            .select(`
+                id,
+                reservation_date,
+                start_time,
+                end_time,
+                status,
+                notes,
+                created_at,
+                profiles!reservations_client_id_fkey ( 
+                    full_name 
+                ),
+                services ( 
+                    name 
+                )
+            `)
+            .order('reservation_date', { ascending: false });
+
+        if (error) {
+            console.error('❌ Error fetching reservations:', error);
+            tableBody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
+            return;
+        }
+
+        console.log('✅ Reservations fetched:', reservations?.length || 0);
+        console.log('Data:', reservations);
+
+        if (!reservations || reservations.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Belum ada reservasi</td></tr>';
+            return;
+        }
+
+        // Render table
+        tableBody.innerHTML = reservations.map(res => `
+            <tr>
+                <td>${res.profiles?.full_name || 'N/A'}</td>
+                <td>${res.services?.name || 'N/A'}</td>
+                <td>${res.reservation_date}</td>
+                <td>${res.start_time.substring(0, 5)} - ${res.end_time.substring(0, 5)}</td>
+                <td><span class="status-${res.status}">${res.status}</span></td>
+                <td>
+                    ${res.status === 'pending' ? `
+                        <button class="action-btn confirm-btn" onclick="updateReservationStatus('${res.id}', 'confirmed')">Confirm</button>
+                        <button class="action-btn cancel-btn" onclick="updateReservationStatus('${res.id}', 'cancelled')">Cancel</button>
+                    ` : '-'}
+                </td>
+            </tr>
+        `).join('');
+
+        console.log('✅ Table rendered successfully');
+
+    } catch (error) {
+        console.error('💥 Unexpected error:', error);
+        tableBody.innerHTML = `<tr><td colspan="6" style="color: red;">Unexpected error: ${error.message}</td></tr>`;
+    }
 }
 
 async function updateReservationStatus(reservationId, newStatus) {
