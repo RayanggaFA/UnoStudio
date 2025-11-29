@@ -281,6 +281,7 @@ async function updateReservationStatus(reservationId, newStatus) {
 // ==================== CLIENT DASHBOARD ====================
 
 let selectedTimeSlot = null;
+let currentServiceData = null;
 
 async function loadClientDashboard() {
     const { data: { user } } = await supabaseClient.auth.getUser();
@@ -291,16 +292,37 @@ async function loadClientDashboard() {
     
     await populateServicesDropdown();
     await fetchAndDisplayClientReservations();
-
+    await fetchAndDisplayPaymentHistory();
+    
     const dateInput = document.getElementById('reservation-date');
+    const serviceSelect = document.getElementById('service-select');
     const bookingForm = document.getElementById('booking-form');
     
+    // Set minimum date to today
     if (dateInput) {
-        dateInput.addEventListener('change', generateAvailableTimeSlots);
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.setAttribute('min', today);
+        dateInput.addEventListener('change', () => {
+            generateAvailableTimeSlots();
+            updateBookingSummary();
+        });
+    }
+    
+    if (serviceSelect) {
+        serviceSelect.addEventListener('change', updateBookingSummary);
     }
     
     if (bookingForm) {
-        bookingForm.addEventListener('submit', handleBookingSubmit);
+        bookingForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            alert('Silakan pilih waktu dan klik tombol "Bayar Sekarang" untuk melanjutkan pembayaran.');
+        });
+    }
+    
+    // Payment button handler
+    const btnPay = document.getElementById('btn-pay');
+    if (btnPay) {
+        btnPay.addEventListener('click', handlePaymentClick);
     }
 }
 
@@ -314,20 +336,16 @@ async function populateServicesDropdown() {
         return;
     }
 
-    console.log('Services loaded:', services); // DEBUG
-
     selectElement.innerHTML = '<option value="">-- Pilih Layanan --</option>' + 
-        services.map(service => {
-            // Price SUDAH TOTAL untuk durasi, tidak perlu kalkulasi lagi
-            return `<option value="${service.id}" 
+        services.map(service => 
+            `<option value="${service.id}" 
                      data-name="${service.name}"
                      data-price="${service.price}"
                      data-duration="${service.duration_minutes}">
                 ${service.name} (${service.duration_minutes} menit) - Rp ${service.price.toLocaleString('id-ID')}
-            </option>`;
-        }).join('');
+            </option>`
+        ).join('');
 }
-
 
 async function generateAvailableTimeSlots() {
     const date = document.getElementById('reservation-date').value;
@@ -344,9 +362,10 @@ async function generateAvailableTimeSlots() {
         .from('reservations')
         .select('start_time, end_time')
         .eq('reservation_date', date)
-        .neq('status', 'cancelled');
+        .in('status', ['pending', 'confirmed']); // Exclude cancelled
 
     if (error) {
+        console.error('Error fetching booked slots:', error);
         container.innerHTML = '<p>Gagal memuat slot waktu.</p>';
         return;
     }
@@ -358,6 +377,7 @@ async function generateAvailableTimeSlots() {
     }
 
     container.innerHTML = '';
+    
     allSlots.forEach(slot => {
         const slotTime = `${slot}:00`;
         let isBooked = false;
@@ -380,11 +400,65 @@ async function generateAvailableTimeSlots() {
                 document.querySelectorAll('.time-slot.selected').forEach(el => el.classList.remove('selected'));
                 slotElement.classList.add('selected');
                 selectedTimeSlot = slot;
+                updateBookingSummary(); // Update summary setelah pilih slot
             });
         }
+        
         container.appendChild(slotElement);
     });
+    
+    console.log(`Generated ${allSlots.length} time slots, ${bookedSlots.length} booked`);
 }
+
+function updateBookingSummary() {
+    const serviceSelect = document.getElementById('service-select');
+    const dateInput = document.getElementById('reservation-date');
+    const summary = document.getElementById('booking-summary');
+    
+    if (!serviceSelect || !dateInput || !summary) return;
+    
+    if (!serviceSelect.value || !dateInput.value || !selectedTimeSlot) {
+        summary.classList.remove('show');
+        return;
+    }
+    
+    const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+    const serviceName = selectedOption.dataset.name;
+    const totalAmount = parseInt(selectedOption.dataset.price);
+    const durationMinutes = parseInt(selectedOption.dataset.duration);
+    
+    const startTime = selectedTimeSlot + ':00';
+    const endTimeObj = new Date(`1970-01-01T${startTime}`);
+    endTimeObj.setMinutes(endTimeObj.getMinutes() + durationMinutes);
+    const endTime = endTimeObj.toTimeString().substring(0, 8);
+    
+    console.log('=== BOOKING SUMMARY ===');
+    console.log('Service:', serviceName);
+    console.log('Total:', totalAmount);
+    console.log('Duration:', durationMinutes, 'minutes');
+    console.log('Time:', startTime, '-', endTime);
+    
+    currentServiceData = {
+        service_id: serviceSelect.value,
+        service_name: serviceName,
+        reservation_date: dateInput.value,
+        start_time: startTime,
+        end_time: endTime,
+        total_amount: totalAmount,
+        duration_minutes: durationMinutes
+    };
+    
+    // Update display
+    document.getElementById('summary-service').textContent = serviceName;
+    document.getElementById('summary-date').textContent = formatDate(dateInput.value);
+    document.getElementById('summary-time').textContent = `${selectedTimeSlot} - ${endTime.substring(0,5)}`;
+    document.getElementById('summary-duration').textContent = `${durationMinutes} Menit`;
+    document.getElementById('summary-price-per-hour').textContent = `Total Paket`;
+    document.getElementById('summary-total').textContent = `Rp ${totalAmount.toLocaleString('id-ID')}`;
+    
+    summary.classList.add('show');
+}
+
 
 async function handleBookingSubmit(e) {
     e.preventDefault();
@@ -451,6 +525,7 @@ async function fetchAndDisplayClientReservations() {
         .order('reservation_date', { ascending: false });
 
     if (error) {
+        console.error('Error fetching reservations:', error);
         listContainer.innerHTML = '<p>Gagal memuat riwayat reservasi.</p>';
         return;
     }
@@ -465,6 +540,7 @@ async function fetchAndDisplayClientReservations() {
             <p><strong>Layanan:</strong> ${res.services.name}</p>
             <p><strong>Tanggal:</strong> ${res.reservation_date} - Jam ${res.start_time.substring(0, 5)}</p>
             <p><strong>Status:</strong> <span class="status-${res.status}">${res.status}</span></p>
+            ${res.notes ? `<p><strong>Catatan:</strong> ${res.notes}</p>` : ''}
         </div>
     `).join('');
 }
@@ -675,11 +751,7 @@ function initializePhotoCards() {
 }
 
 // ==================== PAYMENT INTEGRATION ====================
-// TAMBAHAN untuk integrasi Midtrans Payment
 
-let currentServiceData = null;
-
-// GANTI fungsi loadClientDashboard yang sudah ada dengan ini:
 async function loadClientDashboard() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
@@ -807,7 +879,6 @@ async function handlePaymentClick() {
             return;
         }
         
-        // Get user profile
         const { data: profile, error: profileError } = await supabaseClient
             .from('profiles')
             .select('full_name, phone_number')
@@ -820,7 +891,6 @@ async function handlePaymentClick() {
         
         const notes = document.getElementById('notes').value;
         
-        // Prepare payment data
         const paymentData = {
             service_id: currentServiceData.service_id,
             service_name: currentServiceData.service_name,
@@ -835,14 +905,10 @@ async function handlePaymentClick() {
         };
         
         console.log('=== PAYMENT REQUEST ===');
-        console.log('Payment Data:', paymentData);
+        console.log(paymentData);
         
-        // Call Edge Function
         const { data: { session } } = await supabaseClient.auth.getSession();
-        
         const edgeFunctionUrl = `${SUPABASE_URL}/functions/v1/create-payment`;
-        console.log('Edge Function URL:', edgeFunctionUrl);
-        console.log('Authorization Token:', session.access_token ? 'Present' : 'Missing');
         
         const response = await fetch(edgeFunctionUrl, {
             method: 'POST',
@@ -853,52 +919,33 @@ async function handlePaymentClick() {
             body: JSON.stringify(paymentData)
         });
         
-        console.log('Response Status:', response.status);
-        console.log('Response OK:', response.ok);
+        console.log('Response status:', response.status);
         
-        const responseText = await response.text();
-        console.log('Response Text:', responseText);
+        const result = await response.json();
+        console.log('Response data:', result);
         
-        let result;
-        try {
-            result = JSON.parse(responseText);
-        } catch (e) {
-            throw new Error('Invalid JSON response: ' + responseText);
-        }
-        
-        console.log('Parsed Result:', result);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${result.error || responseText}`);
-        }
-        
-        if (!result.success) {
+        if (!response.ok || !result.success) {
             throw new Error(result.error || 'Gagal memproses pembayaran');
         }
         
         if (!result.snap_token) {
-            throw new Error('Snap token tidak ditemukan di response');
+            throw new Error('Snap token tidak ditemukan');
         }
         
-        console.log('Snap Token:', result.snap_token);
-        
-        // Check if snap is loaded
         if (typeof window.snap === 'undefined') {
             throw new Error('Midtrans Snap belum dimuat. Refresh halaman dan coba lagi.');
         }
         
         console.log('Opening Midtrans Snap...');
         
-        // Open Midtrans Snap
         window.snap.pay(result.snap_token, {
             onSuccess: async function(paymentResult) {
                 console.log('✅ Payment success:', paymentResult);
                 
-                // ========== TAMBAHAN KODE DI SINI ==========
                 try {
                     console.log('Processing post-payment actions...');
                     
-                    // 1. Update payment status
+                    // Update payment status
                     const { error: updateError } = await supabaseClient
                         .from('payments')
                         .update({ 
@@ -914,7 +961,7 @@ async function handlePaymentClick() {
                         console.log('✅ Payment status updated to paid');
                     }
                     
-                    // 2. Get payment data
+                    // Get payment data
                     const { data: payment, error: fetchError } = await supabaseClient
                         .from('payments')
                         .select('*')
@@ -924,9 +971,9 @@ async function handlePaymentClick() {
                     if (fetchError) {
                         console.error('❌ Failed to fetch payment:', fetchError);
                     } else if (payment && !payment.reservation_id) {
-                        console.log('Creating reservation for payment:', payment.order_id);
+                        console.log('Creating reservation...');
                         
-                        // 3. Create reservation
+                        // Create reservation
                         const { data: reservation, error: resError } = await supabaseClient
                             .from('reservations')
                             .insert({
@@ -946,26 +993,19 @@ async function handlePaymentClick() {
                         } else {
                             console.log('✅ Reservation created:', reservation.id);
                             
-                            // 4. Link payment to reservation
-                            const { error: linkError } = await supabaseClient
+                            // Link payment to reservation
+                            await supabaseClient
                                 .from('payments')
                                 .update({ reservation_id: reservation.id })
                                 .eq('order_id', result.order_id);
                             
-                            if (linkError) {
-                                console.error('❌ Failed to link payment:', linkError);
-                            } else {
-                                console.log('✅ Payment linked to reservation');
-                            }
+                            console.log('✅ Payment linked to reservation');
                         }
-                    } else if (payment && payment.reservation_id) {
-                        console.log('ℹ️ Reservation already exists:', payment.reservation_id);
                     }
                     
                 } catch (e) {
                     console.error('❌ Error in post-payment processing:', e);
                 }
-                // ========== AKHIR TAMBAHAN ==========
                 
                 alert('✅ Pembayaran berhasil! Reservasi Anda sedang menunggu konfirmasi admin.');
                 
@@ -977,11 +1017,11 @@ async function handlePaymentClick() {
                 selectedTimeSlot = null;
                 currentServiceData = null;
                 
-                // Reload data dengan delay
+                // Reload data
                 setTimeout(async () => {
                     await fetchAndDisplayClientReservations();
                     await fetchAndDisplayPaymentHistory();
-                }, 1500); // Delay 1.5 detik untuk tunggu database update
+                }, 1500);
                 
                 btnPay.disabled = false;
                 btnPay.textContent = '💳 Bayar Sekarang';
@@ -1017,6 +1057,7 @@ async function handlePaymentClick() {
     }
 }
 
+// Payment History
 // Payment History
 async function fetchAndDisplayPaymentHistory() {
     const listContainer = document.getElementById('payment-history-list');
@@ -1073,6 +1114,7 @@ async function fetchAndDisplayPaymentHistory() {
     }).join('');
 }
 
+
 function getPaymentStatusBadgeHTML(status) {
     const badges = {
         'paid': '<span class="badge badge-success">✓ Lunas</span>',
@@ -1086,6 +1128,11 @@ function getPaymentStatusBadgeHTML(status) {
 
 async function retryPayment(snapToken) {
     try {
+        if (typeof window.snap === 'undefined') {
+            alert('Midtrans Snap belum dimuat. Refresh halaman dan coba lagi.');
+            return;
+        }
+        
         window.snap.pay(snapToken, {
             onSuccess: async function() {
                 alert('✅ Pembayaran berhasil!');
@@ -1098,9 +1145,6 @@ async function retryPayment(snapToken) {
             },
             onError: function() {
                 alert('❌ Pembayaran gagal.');
-            },
-            onClose: function() {
-                console.log('Payment popup closed');
             }
         });
     } catch (error) {
@@ -1119,7 +1163,6 @@ function formatDateTime(datetimeStr) {
     return date.toLocaleDateString('id-ID') + ' ' + date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 }
 
-// Make functions globally available
 window.retryPayment = retryPayment;
 
 // Make functions globally available for onclick handlers
