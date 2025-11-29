@@ -251,174 +251,89 @@ async function fetchAndDisplayAllReservations() {
     console.log('=== FETCHING RESERVATIONS FOR ADMIN ===');
 
     try {
+        // Check if user is authenticated
         const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
         
         if (authError || !user) {
             console.error('Auth error:', authError);
-            tableBody.innerHTML = '<tr><td colspan="6" style="color: red;">Not authenticated</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="6" style="color: red;">Not authenticated. Please login.</td></tr>';
             return;
         }
 
+        console.log('User authenticated:', user.email);
+
+        // Check if user is admin
         const { data: profile, error: profileError } = await supabaseClient
             .from('profiles')
             .select('role')
             .eq('id', user.id)
             .single();
 
-        if (profileError || !profile || profile.role !== 'admin') {
-            console.error('Not admin');
-            tableBody.innerHTML = '<tr><td colspan="6" style="color: red;">Access denied</td></tr>';
+        if (profileError || !profile) {
+            console.error('Profile error:', profileError);
+            tableBody.innerHTML = '<tr><td colspan="6" style="color: red;">Failed to fetch profile</td></tr>';
             return;
         }
 
-        // ===== METHOD 1: Try with foreign key reference =====
-        let reservations, profiles, services;
-        
-        const { data: res1, error: err1 } = await supabaseClient
+        console.log('User role:', profile.role);
+
+        if (profile.role !== 'admin') {
+            tableBody.innerHTML = '<tr><td colspan="6" style="color: red;">Access denied. Admin only.</td></tr>';
+            return;
+        }
+
+        // Fetch reservations
+        const { data: reservations, error } = await supabaseClient
             .from('reservations')
             .select(`
-                id,
-                client_id,
-                service_id,
+                full_name,
                 reservation_date,
                 start_time,
                 end_time,
                 status,
                 notes,
-                profiles!reservations_client_id_fkey (full_name),
-                services!reservations_service_id_fkey (name)
+                created_at,
+                profiles!reservations_client_id_fkey ( 
+                    full_name 
+                ),
+                services ( 
+                    name 
+                )
             `)
             .order('reservation_date', { ascending: false });
 
-        if (!err1 && res1) {
-            console.log('✅ Method 1 success (with foreign key)', res1);
-            
-            tableBody.innerHTML = res1.map(res => `
-                <tr>
-                    <td>${res.profiles?.full_name || 'N/A'}</td>
-                    <td>${res.services?.name || 'N/A'}</td>
-                    <td>${res.reservation_date}</td>
-                    <td>${res.start_time.substring(0, 5)} - ${res.end_time.substring(0, 5)}</td>
-                    <td><span class="status-${res.status}">${res.status}</span></td>
-                    <td>
-                        ${res.status === 'pending' ? `
-                            <button class="action-btn confirm-btn" onclick="updateReservationStatus('${res.id}', 'confirmed')">Confirm</button>
-                            <button class="action-btn cancel-btn" onclick="updateReservationStatus('${res.id}', 'cancelled')">Cancel</button>
-                        ` : '-'}
-                    </td>
-                </tr>
-            `).join('');
-            
+        if (error) {
+            console.error('❌ Error fetching reservations:', error);
+            tableBody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
             return;
         }
 
-        console.log('⚠️ Method 1 failed, trying Method 2...', err1);
+        console.log('✅ Reservations fetched:', reservations?.length || 0);
+        console.log('Data:', reservations);
 
-        // ===== METHOD 2: Try without foreign key reference =====
-        const { data: res2, error: err2 } = await supabaseClient
-            .from('reservations')
-            .select(`
-                id,
-                client_id,
-                service_id,
-                reservation_date,
-                start_time,
-                end_time,
-                status,
-                profiles (full_name),
-                services (name)
-            `)
-            .order('reservation_date', { ascending: false });
-
-        if (!err2 && res2) {
-            console.log('✅ Method 2 success (without FK name)', res2);
-            
-            tableBody.innerHTML = res2.map(res => `
-                <tr>
-                    <td>${res.profiles?.full_name || 'N/A'}</td>
-                    <td>${res.services?.name || 'N/A'}</td>
-                    <td>${res.reservation_date}</td>
-                    <td>${res.start_time.substring(0, 5)} - ${res.end_time.substring(0, 5)}</td>
-                    <td><span class="status-${res.status}">${res.status}</span></td>
-                    <td>
-                        ${res.status === 'pending' ? `
-                            <button class="action-btn confirm-btn" onclick="updateReservationStatus('${res.id}', 'confirmed')">Confirm</button>
-                            <button class="action-btn cancel-btn" onclick="updateReservationStatus('${res.id}', 'cancelled')">Cancel</button>
-                        ` : '-'}
-                    </td>
-                </tr>
-            `).join('');
-            
+        if (!reservations || reservations.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Belum ada reservasi</td></tr>';
             return;
         }
 
-        console.log('⚠️ Method 2 failed, trying Method 3...', err2);
+        // Render table
+        tableBody.innerHTML = reservations.map(res => `
+            <tr>
+                <td>${res.profiles?.full_name || 'N/A'}</td>
+                <td>${res.services?.name || 'N/A'}</td>
+                <td>${res.reservation_date}</td>
+                <td>${res.start_time.substring(0, 5)} - ${res.end_time.substring(0, 5)}</td>
+                <td><span class="status-${res.status}">${res.status}</span></td>
+                <td>
+                    ${res.status === 'pending' ? `
+                        <button class="action-btn confirm-btn" onclick="updateReservationStatus('${res.id}', 'confirmed')">Confirm</button>
+                        <button class="action-btn cancel-btn" onclick="updateReservationStatus('${res.id}', 'cancelled')">Cancel</button>
+                    ` : '-'}
+                </td>
+            </tr>
+        `).join('');
 
-        // ===== METHOD 3: Manual join (fallback) =====
-        const { data: res3, error: err3 } = await supabaseClient
-            .from('reservations')
-            .select('*')
-            .order('reservation_date', { ascending: false });
-
-        if (err3 || !res3) {
-            console.error('❌ All methods failed!', err3);
-            tableBody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${err3?.message || 'Unknown error'}</td></tr>`;
-            return;
-        }
-
-        console.log('✅ Method 3: Manual join', res3);
-
-        // Fetch related data separately
-        const clientIds = [...new Set(res3.map(r => r.client_id).filter(Boolean))];
-        const serviceIds = [...new Set(res3.map(r => r.service_id).filter(Boolean))];
-
-        const { data: profilesData } = await supabaseClient
-            .from('profiles')
-            .select('id, full_name')
-            .in('id', clientIds);
-
-        const { data: servicesData } = await supabaseClient
-            .from('services')
-            .select('id, name')
-            .in('id', serviceIds);
-
-        console.log('Profiles:', profilesData);
-        console.log('Services:', servicesData);
-
-        // Create lookup maps
-        const profileMap = {};
-        profilesData?.forEach(p => {
-            profileMap[p.id] = p.full_name;
-        });
-
-        const serviceMap = {};
-        servicesData?.forEach(s => {
-            serviceMap[s.id] = s.name;
-        });
-
-        // Render
-        tableBody.innerHTML = res3.map(res => {
-            const clientName = profileMap[res.client_id] || 'Unknown';
-            const serviceName = serviceMap[res.service_id] || 'Unknown';
-            
-            return `
-                <tr>
-                    <td>${clientName}</td>
-                    <td>${serviceName}</td>
-                    <td>${res.reservation_date}</td>
-                    <td>${res.start_time.substring(0, 5)} - ${res.end_time.substring(0, 5)}</td>
-                    <td><span class="status-${res.status}">${res.status}</span></td>
-                    <td>
-                        ${res.status === 'pending' ? `
-                            <button class="action-btn confirm-btn" onclick="updateReservationStatus('${res.id}', 'confirmed')">Confirm</button>
-                            <button class="action-btn cancel-btn" onclick="updateReservationStatus('${res.id}', 'cancelled')">Cancel</button>
-                        ` : '-'}
-                    </td>
-                </tr>
-            `;
-        }).join('');
-
-        console.log('✅ Table rendered with Method 3');
+        console.log('✅ Table rendered successfully');
 
     } catch (error) {
         console.error('💥 Unexpected error:', error);
