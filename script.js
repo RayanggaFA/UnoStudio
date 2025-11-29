@@ -286,7 +286,7 @@ async function fetchAndDisplayAllReservations() {
         const { data: reservations, error } = await supabaseClient
             .from('reservations')
             .select(`
-                full_name,
+                id,
                 reservation_date,
                 start_time,
                 end_time,
