@@ -282,24 +282,23 @@ async function fetchAndDisplayAllReservations() {
             return;
         }
 
-        // Fetch reservations
         const { data: reservations, error } = await supabaseClient
-            .from('reservations')
-            .select(`
-                full_name,
-                reservation_date,
-                start_time,
-                end_time,
-                status,
-                notes,
-                created_at,
-                profiles!reservations_client_id_fkey ( 
-                    full_name 
-                ),
-                services ( 
-                    name 
-                )
-            `)
+        .from('reservations')
+        .select(`
+        id,
+        reservation_date,
+        start_time,
+        end_time,
+        status,
+        notes,
+        created_at,
+        profiles:client_id (
+        full_name
+        ),
+        services (
+        name
+        )
+        `)
             .order('reservation_date', { ascending: false });
 
         if (error) {
