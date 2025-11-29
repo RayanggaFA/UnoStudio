@@ -293,7 +293,7 @@ async function fetchAndDisplayAllReservations() {
                 status,
                 notes,
                 created_at,
-                profiles!reservations_client_id_fkey ( 
+                profiles( 
                     full_name 
                 ),
                 services ( 
