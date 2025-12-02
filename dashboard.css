@@ -359,3 +359,486 @@ th {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
+
+/* theme-toggle.css - Light/Dark Mode Styling */
+
+/* Toggle Switch Container */
+.theme-toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.theme-label {
+    font-size: 14px;
+    color: var(--gray-text);
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+body.dark-mode .theme-label {
+    color: var(--light-text);
+}
+
+/* Toggle Switch */
+.theme-toggle {
+    position: relative;
+    width: 60px;
+    height: 30px;
+    background-color: #4a5568;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    border: 2px solid #2d3748;
+}
+
+.theme-toggle::before {
+    content: '☀️';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 22px;
+    height: 22px;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    transition: transform 0.3s, background-color 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+body.dark-mode .theme-toggle {
+    background-color: #2d3748;
+    border-color: var(--primary-color);
+}
+
+body.dark-mode .theme-toggle::before {
+    content: '🌙';
+    transform: translateX(30px);
+    background-color: var(--primary-color);
+}
+
+/* Smooth Transitions for All Elements */
+body,
+.dashboard-header,
+.card,
+.table-container,
+table,
+th,
+td,
+.form-group input,
+.form-group select,
+.form-group textarea,
+.time-slot,
+.reservation-item,
+.booking-summary {
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+/* ========== LIGHT MODE (Default) ========== */
+body.light-mode {
+    background-color: #f3f4f6;
+    color: #1f2937;
+}
+
+body.light-mode .dashboard-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+body.light-mode .logo {
+    color: #1f2937;
+}
+
+body.light-mode .card {
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+body.light-mode h1,
+body.light-mode h2,
+body.light-mode h3 {
+    color: #1f2937;
+}
+
+body.light-mode p {
+    color: #4b5563;
+}
+
+body.light-mode .table-container {
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+body.light-mode table {
+    background-color: #ffffff;
+}
+
+body.light-mode th {
+    background-color: #f9fafb;
+    color: #1f2937;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+body.light-mode td {
+    color: #4b5563;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+body.light-mode tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+body.light-mode .form-group input,
+body.light-mode .form-group select,
+body.light-mode .form-group textarea {
+    background-color: #f9fafb;
+    border: 1px solid #d1d5db;
+    color: #1f2937;
+}
+
+body.light-mode .form-group label {
+    color: #374151;
+}
+
+body.light-mode .time-slot {
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+    color: #1f2937;
+}
+
+body.light-mode .time-slot.selected {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #ffffff;
+}
+
+body.light-mode .time-slot.disabled {
+    background-color: #e5e7eb;
+    color: #9ca3af;
+}
+
+body.light-mode #client-reservations-list .reservation-item {
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+}
+
+body.light-mode .booking-summary {
+    background-color: #f9fafb;
+    border: 2px solid var(--primary-color);
+}
+
+body.light-mode .summary-row .summary-label {
+    color: #6b7280;
+}
+
+body.light-mode .summary-row .summary-value {
+    color: #1f2937;
+}
+
+body.light-mode .payment-item {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+}
+
+body.light-mode .payment-header strong {
+    color: #1f2937;
+}
+
+body.light-mode .payment-item p {
+    color: #6b7280;
+}
+
+/* ========== DARK MODE ========== */
+/* Dark mode sudah menggunakan CSS variables dari dashboard.css */
+/* Hanya perlu memastikan tidak ada override yang mengganggu */
+
+body.dark-mode {
+    /* Menggunakan var(--dark-blue) dari dashboard.css */
+}
+
+body.dark-mode .dashboard-header {
+    /* Menggunakan var(--secondary-color) dari dashboard.css */
+}
+
+body.dark-mode .logout-btn:hover {
+    background-color: #c62828;
+    transform: translateY(-2px);
+}
+
+body.dark-mode .action-btn:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+}
+
+/* Additional hover effects for better UX */
+.theme-toggle:hover {
+    transform: scale(1.05);
+}
+
+.theme-toggle:active {
+    transform: scale(0.95);
+}
+
+.theme-toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.theme-label {
+    font-size: 14px;
+    color: var(--gray-text);
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+body.dark-mode .theme-label {
+    color: var(--light-text);
+}
+
+/* Toggle Switch */
+.theme-toggle {
+    position: relative;
+    width: 60px;
+    height: 30px;
+    background-color: #4a5568;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    border: 2px solid #2d3748;
+}
+
+.theme-toggle::before {
+    content: '☀️';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 22px;
+    height: 22px;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    transition: transform 0.3s, background-color 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+body.dark-mode .theme-toggle {
+    background-color: #2d3748;
+    border-color: var(--primary-color);
+}
+
+body.dark-mode .theme-toggle::before {
+    content: '🌙';
+    transform: translateX(30px);
+    background-color: var(--primary-color);
+}
+
+/* Smooth Transitions for All Elements */
+body,
+.dashboard-header,
+.card,
+.table-container,
+table,
+th,
+td,
+.form-group input,
+.form-group select,
+.form-group textarea,
+.time-slot,
+.reservation-item,
+.booking-summary {
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+/* ========== LIGHT MODE (Default) ========== */
+body.light-mode {
+    background-color: #f3f4f6;
+    color: #1f2937;
+}
+
+body.light-mode .dashboard-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+body.light-mode .logo {
+    color: #1f2937;
+}
+
+body.light-mode .card {
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+body.light-mode h1,
+body.light-mode h2,
+body.light-mode h3 {
+    color: #1f2937;
+}
+
+body.light-mode p {
+    color: #4b5563;
+}
+
+body.light-mode .table-container {
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+body.light-mode table {
+    background-color: #ffffff;
+}
+
+body.light-mode th {
+    background-color: #f9fafb;
+    color: #1f2937;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+body.light-mode td {
+    color: #4b5563;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+body.light-mode tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+body.light-mode .form-group input,
+body.light-mode .form-group select,
+body.light-mode .form-group textarea {
+    background-color: #f9fafb;
+    border: 1px solid #d1d5db;
+    color: #1f2937;
+}
+
+body.light-mode .form-group label {
+    color: #374151;
+}
+
+body.light-mode .time-slot {
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+    color: #1f2937;
+}
+
+body.light-mode .time-slot.selected {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #ffffff;
+}
+
+body.light-mode .time-slot.disabled {
+    background-color: #e5e7eb;
+    color: #9ca3af;
+}
+
+body.light-mode #client-reservations-list .reservation-item {
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+}
+
+body.light-mode .booking-summary {
+    background-color: #f9fafb;
+    border: 2px solid var(--primary-color);
+}
+
+body.light-mode .summary-row .summary-label {
+    color: #6b7280;
+}
+
+body.light-mode .summary-row .summary-value {
+    color: #1f2937;
+}
+
+body.light-mode .payment-item {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+}
+
+body.light-mode .payment-header strong {
+    color: #1f2937;
+}
+
+body.light-mode .payment-item p {
+    color: #6b7280;
+}
+
+/* Light Mode - Client Dashboard Specific */
+body.light-mode .cta-button {
+    background-color: var(--primary-color);
+    color: #ffffff;
+}
+
+body.light-mode .cta-button:hover {
+    background-color: #e63333;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 58, 58, 0.3);
+}
+
+body.light-mode .btn-pay {
+    background-color: var(--primary-color);
+    color: #ffffff;
+}
+
+body.light-mode .btn-pay:hover:not(:disabled) {
+    background-color: #e63333;
+}
+
+body.light-mode .btn-pay:disabled {
+    background-color: #9ca3af;
+}
+
+body.light-mode .time-slots p {
+    color: #6b7280;
+}
+
+/* Light Mode - Booking Summary */
+body.light-mode .booking-summary h3 {
+    color: var(--primary-color);
+}
+
+body.light-mode .booking-summary .summary-row:last-child {
+    color: var(--primary-color);
+}
+
+body.light-mode .booking-summary .summary-row:last-child .summary-value {
+    color: var(--primary-color);
+}
+
+/* ========== DARK MODE ========== */
+/* Dark mode sudah menggunakan CSS variables dari dashboard.css */
+/* Hanya perlu memastikan tidak ada override yang mengganggu */
+
+body.dark-mode {
+    /* Menggunakan var(--dark-blue) dari dashboard.css */
+}
+
+body.dark-mode .dashboard-header {
+    /* Menggunakan var(--secondary-color) dari dashboard.css */
+}
+
+body.dark-mode .logout-btn:hover {
+    background-color: #c62828;
+    transform: translateY(-2px);
+}
+
+body.dark-mode .action-btn:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+}
+
+/* Additional hover effects for better UX */
+.theme-toggle:hover {
+    transform: scale(1.05);
+}
+
+.theme-toggle:active {
+    transform: scale(0.95);
+}

@@ -1244,3 +1244,76 @@ window.retryPayment = retryPayment;
 
 // Make functions globally available for onclick handlers
 window.updateReservationStatus = updateReservationStatus;
+
+// theme-toggle.js - Light/Dark Mode Toggle Functionality
+
+// Initialize theme on page load
+function initializeTheme() {
+    // Get saved theme from localStorage, default to 'dark'
+    const savedTheme = localStorage.getItem('uno-studio-theme') || 'dark';
+    
+    // Apply the theme
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+        document.body.classList.remove('dark-mode');
+    } else {
+        document.body.classList.add('dark-mode');
+        document.body.classList.remove('light-mode');
+    }
+    
+    console.log('Theme initialized:', savedTheme);
+}
+
+// Toggle between light and dark mode
+function toggleTheme() {
+    const body = document.body;
+    
+    // Toggle classes
+    if (body.classList.contains('dark-mode')) {
+        body.classList.remove('dark-mode');
+        body.classList.add('light-mode');
+        localStorage.setItem('uno-studio-theme', 'light');
+        console.log('Switched to light mode');
+    } else {
+        body.classList.remove('light-mode');
+        body.classList.add('dark-mode');
+        localStorage.setItem('uno-studio-theme', 'dark');
+        console.log('Switched to dark mode');
+    }
+}
+
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize theme first
+    initializeTheme();
+    
+    // Get toggle button
+    const themeToggle = document.getElementById('theme-toggle');
+    
+    if (themeToggle) {
+        // Add click event listener
+        themeToggle.addEventListener('click', toggleTheme);
+        
+        // Add keyboard accessibility
+        themeToggle.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleTheme();
+            }
+        });
+        
+        // Make it focusable for keyboard navigation
+        themeToggle.setAttribute('tabindex', '0');
+    } else {
+        console.warn('Theme toggle button not found');
+    }
+});
+
+// Optional: Add keyboard shortcut (Ctrl+Shift+L) to toggle theme
+document.addEventListener('keydown', function(e) {
+    // Ctrl+Shift+L or Cmd+Shift+L
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'L') {
+        e.preventDefault();
+        toggleTheme();
+    }
+});

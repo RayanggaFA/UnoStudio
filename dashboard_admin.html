@@ -5,12 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - UNO Studio</title>
     <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="theme-toggle.css">
 </head>
 <body>
     <header class="dashboard-header">
         <div class="container">
             <a href="Uno Studio.html" class="logo">UNO STUDIO</a>
-            <button id="logout-button" class="logout-btn">Logout</button>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div class="theme-toggle-container">
+                    <span class="theme-label">Light</span>
+                    <div class="theme-toggle" id="theme-toggle" role="button" aria-label="Toggle dark mode"></div>
+                    <span class="theme-label">Dark</span>
+                </div>
+                <button id="logout-button" class="logout-btn">Logout</button>
+            </div>
         </div>
     </header>
 
