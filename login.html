@@ -5,8 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - UNO Studio</title>
     <link rel="stylesheet" href="auth.css">
+    <link rel="stylesheet" href="theme-toggle.css">
 </head>
 <body>
+    <!-- Theme Toggle - Positioned at top right -->
+    <div class="theme-toggle-float">
+        <div class="theme-toggle-container">
+            <span class="theme-label">Light</span>
+            <div class="theme-toggle" id="theme-toggle" role="button" aria-label="Toggle dark mode"></div>
+            <span class="theme-label">Dark</span>
+        </div>
+    </div>
+
     <div class="auth-container">
         <a href="Uno Studio.html" class="logo">UNO STUDIO</a>
         <h2>Login</h2>
@@ -29,5 +39,6 @@
     <!-- Supabase & Script -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
+    <script src="theme-toggle.js"></script>
 </body>
 </html>
