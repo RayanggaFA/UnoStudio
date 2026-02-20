@@ -694,7 +694,7 @@ header .container {
 
 /* Camera Specialist Section Styles */
 .camera-specialist {
-    padding: 100px 0; 
+    padding: 120px 0; 
     background-color: #101b31;
     font-family: 'Montserrat', sans-serif;
     position: relative;
@@ -975,7 +975,7 @@ header .container {
             align-items: center;
             color: #ff3333;
             font-size: 15px;
-            font-weight: 600;
+            font-weight: 800;
             letter-spacing: 2px;
             margin-bottom: 20px;
             text-transform: uppercase;
@@ -984,16 +984,6 @@ header .container {
 
         }
 
-        .red-dot {
-            width: 10px;
-            height: 10px;
-            background-color: #ff3333;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 12px;
-            box-shadow: 0 0 10px rgba(255, 51, 51, 0.5);
-            animation: pulse 2s infinite;
-        }
 
         .experience h2 {
             font-size: 48px;
@@ -1861,7 +1851,7 @@ textarea.form-control {
 }
 
 .accordion-item.active .accordion-content {
-    max-height: 200px;
+    max-height: 500px;
 }
 
 
@@ -1954,12 +1944,11 @@ textarea.form-control {
     font-size: 14px;
     color: #ff0000;
     margin-bottom: 10px;
-    font-weight: 500;
+    font-weight: 800;
     position: relative;
 }
 
 .section-subtitle::before {
-    content: "•";
     margin-right: 5px;
     color: #ff0000;
 }

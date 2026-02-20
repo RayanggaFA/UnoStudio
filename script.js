@@ -717,23 +717,28 @@ function initializeHomepageScripts() {
     }
 
     // Accordion
-    const accordionItems = document.querySelectorAll('.accordion-item');
-    if (accordionItems.length > 0) {
-        accordionItems.forEach(item => {
-            const header = item.querySelector('.accordion-header');
-            if (header) {
-                header.addEventListener('click', function() {
-                    const currentlyActive = document.querySelector('.accordion-item.active');
-                    
-                    if(currentlyActive && currentlyActive !== item) {
-                        currentlyActive.classList.remove('active');
-                    }
-                    
-                    item.classList.toggle('active');
-                });
-            }
+    const headers = document.querySelectorAll(".accordion-header");
+
+headers.forEach(header => {
+    header.addEventListener("click", function () {
+
+        const item = this.parentElement;
+        const content = item.querySelector(".accordion-content");
+
+        const isActive = item.classList.contains("active");
+
+        document.querySelectorAll(".accordion-item").forEach(i => {
+            i.classList.remove("active");
+            i.querySelector(".accordion-content").style.maxHeight = null;
         });
-    }
+
+        if (!isActive) {
+            item.classList.add("active");
+            content.style.maxHeight = content.scrollHeight + "px";
+        }
+
+    });
+});
 
     // Mobile menu
     initializeMobileMenu();
@@ -1301,17 +1306,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 toggleTheme();
             }
         });
-        
-        // Make it focusable for keyboard navigation
+    
         themeToggle.setAttribute('tabindex', '0');
     } else {
         console.warn('Theme toggle button not found');
     }
 });
 
-// Optional: Add keyboard shortcut (Ctrl+Shift+L) to toggle theme
 document.addEventListener('keydown', function(e) {
-    // Ctrl+Shift+L or Cmd+Shift+L
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'L') {
         e.preventDefault();
         toggleTheme();
