@@ -1856,6 +1856,237 @@ textarea.form-control {
 }
 
 
+
+/* =========================
+   FAQ SECTION
+========================= */
+
+.faq-section {
+    padding: 80px 20px;
+    background: #010A1A;
+    color: #ffffff;
+}
+
+.faq-container {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.faq-title {
+    margin-bottom: 35px;
+}
+
+.faq-title .red-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 8px;
+    border-radius: 50%;
+    background: #ff3030;
+    vertical-align: middle;
+}
+
+.faq-title .subtitle {
+    color: #b8c0ce;
+    font-size: 12px;
+    letter-spacing: 3px;
+}
+
+.faq-title h2 {
+    margin: 12px 0 0;
+    color: #ffffff;
+    font-size: clamp(28px, 4vw, 40px);
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.faq-list {
+    width: 100%;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.faq-item {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.faq-question {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    width: 100%;
+    padding: 22px 4px;
+    border: none;
+    background: transparent;
+    color: #ffffff;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+}
+
+.faq-question span {
+    flex: 1;
+}
+
+.faq-question:hover {
+    color: #ff4545;
+}
+
+.faq-question:focus-visible {
+    outline: 2px solid #ff4545;
+    outline-offset: 4px;
+}
+
+.faq-icon {
+    flex-shrink: 0;
+    color: #ff3030;
+    font-size: 13px;
+    transition: transform 0.3s ease;
+}
+
+.faq-item.active .faq-icon {
+    transform: rotate(180deg);
+}
+
+.faq-answer {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s ease;
+}
+
+.faq-item.active .faq-answer {
+    grid-template-rows: 1fr;
+}
+
+.faq-answer-inner {
+    min-height: 0;
+    overflow: hidden;
+    padding: 0 35px 0 4px;
+    color: #b8c0ce;
+    font-size: 14px;
+    line-height: 1.8;
+    white-space: normal;
+    transition: padding 0.3s ease;
+}
+
+.faq-item.active .faq-answer-inner {
+    padding-top: 0;
+    padding-bottom: 22px;
+}
+
+
+/* FAQ - Native HTML Accordion */
+#faq.faq-native {
+    padding: 80px 20px;
+    background: #010A1A;
+    color: #fff;
+}
+
+#faq .faq-native-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+#faq .faq-native-title {
+    margin-bottom: 35px;
+}
+
+#faq .faq-native-title .red-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 8px;
+    border-radius: 50%;
+    background: #ff3030;
+}
+
+#faq .faq-native-title .subtitle {
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: #b8c0ce;
+}
+
+#faq .faq-native-title h2 {
+    margin-top: 12px;
+    color: #fff;
+    font-size: clamp(28px, 4vw, 40px);
+}
+
+#faq .faq-native-item {
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+#faq .faq-native-item:last-child {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+#faq .faq-native-item summary {
+    display: list-item;
+    padding: 22px 8px;
+    color: #fff;
+    font-size: 16px;
+    line-height: 1.6;
+    cursor: pointer;
+}
+
+#faq .faq-native-item summary::marker {
+    color: #ff3030;
+}
+
+#faq .faq-native-item summary:hover {
+    color: #ff4545;
+}
+
+#faq .faq-native-answer {
+    padding: 0 30px 22px 8px;
+    color: #b8c0ce;
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+@media (max-width: 600px) {
+    #faq.faq-native {
+        padding: 55px 18px;
+    }
+
+    #faq .faq-native-item summary {
+        padding: 18px 6px;
+        font-size: 14px;
+    }
+
+    #faq .faq-native-answer {
+        padding-right: 12px;
+        font-size: 13px;
+    }
+}
+
+
+/* Responsive */
+@media (max-width: 600px) {
+    .faq-section {
+        padding: 55px 18px;
+    }
+
+    .faq-title {
+        margin-bottom: 25px;
+    }
+
+    .faq-question {
+        gap: 14px;
+        padding: 19px 2px;
+        font-size: 14px;
+    }
+
+    .faq-answer-inner {
+        padding-right: 20px;
+        font-size: 13px;
+    }
+}
+
+
 /* Location section styles */
 .location {
     background-color: #010A1A;

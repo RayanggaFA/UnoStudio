@@ -716,23 +716,52 @@ function initializeHomepageScripts() {
         setInterval(nextSlide, 5000);
     }
 
-   // FAQ Accordion
-document.querySelectorAll("#faq .accordion-header").forEach(function (header) {
-    header.addEventListener("click", function () {
-        const item = this.closest(".accordion-item");
-        const isActive = item.classList.contains("active");
+  
+/* =========================
+   FAQ ACCORDION
+========================= */
 
-        // Tutup semua FAQ
-        document.querySelectorAll("#faq .accordion-item").forEach(function (faq) {
-            faq.classList.remove("active");
-        });
+function initializeFAQ() {
+    const faqItems = document.querySelectorAll("#faq .faq-item");
 
-        // Buka FAQ yang diklik jika sebelumnya tertutup
-        if (!isActive) {
-            item.classList.add("active");
+    faqItems.forEach(function (item) {
+        const button = item.querySelector(".faq-question");
+
+        if (!button) {
+            return;
         }
+
+        button.addEventListener("click", function () {
+            const isOpen = item.classList.contains("active");
+
+            // Tutup semua pertanyaan
+            faqItems.forEach(function (otherItem) {
+                otherItem.classList.remove("active");
+
+                const otherButton =
+                    otherItem.querySelector(".faq-question");
+
+                if (otherButton) {
+                    otherButton.setAttribute("aria-expanded", "false");
+                }
+            });
+
+            // Buka pertanyaan yang dipilih
+            if (!isOpen) {
+                item.classList.add("active");
+                button.setAttribute("aria-expanded", "true");
+            }
+        });
     });
-});
+}
+
+// Jalankan setelah HTML tersedia
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initializeFAQ);
+} else {
+    initializeFAQ();
+}
+
 
     // Mobile menu
     initializeMobileMenu();
