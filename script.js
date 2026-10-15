@@ -716,27 +716,21 @@ function initializeHomepageScripts() {
         setInterval(nextSlide, 5000);
     }
 
-    // Accordion
-    const headers = document.querySelectorAll(".accordion-header");
-
-headers.forEach(header => {
+   // FAQ Accordion
+document.querySelectorAll("#faq .accordion-header").forEach(function (header) {
     header.addEventListener("click", function () {
-
-        const item = this.parentElement;
-        const content = item.querySelector(".accordion-content");
-
+        const item = this.closest(".accordion-item");
         const isActive = item.classList.contains("active");
 
-        document.querySelectorAll(".accordion-item").forEach(i => {
-            i.classList.remove("active");
-            i.querySelector(".accordion-content").style.maxHeight = null;
+        // Tutup semua FAQ
+        document.querySelectorAll("#faq .accordion-item").forEach(function (faq) {
+            faq.classList.remove("active");
         });
 
+        // Buka FAQ yang diklik jika sebelumnya tertutup
         if (!isActive) {
             item.classList.add("active");
-            content.style.maxHeight = content.scrollHeight + "px";
         }
-
     });
 });
 
